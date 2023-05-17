@@ -5,7 +5,7 @@ import 'dart:developer';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'globals.dart';
-import 'main.dart';
+import 'global_state.dart';
 
 class ApiTokens {
   String accessToken;
@@ -55,7 +55,7 @@ void setTokens(ApiTokens? tokens) {
 
 enum HttpMethod { post, get }
 
-const String baseURL = String.fromEnvironment("API_BASE_URL");
+const String baseURL = String.fromEnvironment("API_URL_BASE");
 const String guildsEndpoint = "$baseURL/guilds";
 const String authEndpoint = "$baseURL/auth";
 const String eventsEndpoint = "$baseURL/events/ws";
@@ -207,9 +207,6 @@ class ApiService {
   }
 
   Future<List<Channel>?> getChannels(String id, GlobalState state) async {
-    if (Globals.channelsCache.containsKey(id)) {
-      return Globals.channelsCache[id];
-    }
     try {
       var response =
           await authFetch(HttpMethod.get, channelsEndpoint(id), state);
@@ -218,7 +215,6 @@ class ApiService {
       }
       if (response.statusCode == 200) {
         List<Channel> channels = channelFromJson(response.body);
-        Globals.channelsCache[id] = channels;
         return channels;
       }
     } catch (e) {
@@ -231,13 +227,6 @@ class ApiService {
       String gid, String cid, int limit, GlobalState state) async {
     if (limit > 50) {
       limit = 50;
-    }
-    if (Globals.messagesCache.containsKey(cid) &&
-        Globals.messagesCache[cid] != null) {
-      // Cache hit
-      if (limit <= Globals.messagesCache[cid]!.length) {
-        return Globals.messagesCache[cid];
-      }
     }
     try {
       var response = await authFetch(

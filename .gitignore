@@ -12,6 +12,8 @@ migrate_working_dir/
 .idea/
 .metadata
 
+.vscode/
+
 # IntelliJ related
 *.iml
 *.ipr
