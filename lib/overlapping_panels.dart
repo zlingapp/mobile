@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:core';
+import 'global_state.dart';
 
 /// Display sections
 enum RevealSide { left, right, main }
@@ -25,12 +26,15 @@ class OverlappingPanels extends StatefulWidget {
   /// A callback to notify when a panel reveal has completed.
   final ValueChanged<RevealSide>? onSideChange;
 
+  final GlobalState? appstate;
+
   const OverlappingPanels(
       {this.left,
       required this.main,
       this.right,
       this.restWidth = 40,
       this.onSideChange,
+      this.appstate,
       Key? key})
       : super(key: key);
 
@@ -52,6 +56,30 @@ class OverlappingPanelsState extends State<OverlappingPanels>
     return (multiplier * width) + (-multiplier * widget.restWidth);
   }
 
+  void setCenter() {
+    if (widget.appstate == null ||
+        widget.appstate!.currentMenuSide == RevealSide.main) return;
+    final animationController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 200));
+
+    animationController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        if (widget.onSideChange != null) {
+          widget.onSideChange!(RevealSide.main);
+        }
+        animationController.dispose();
+      }
+    });
+    final Tween<double> tween = Tween(begin: translate, end: 0);
+    final animation = tween.animate(animationController);
+    animation.addListener(() {
+      setState(() {
+        translate = animation.value;
+      });
+    });
+    animationController.forward();
+  }
+
   void _onApplyTranslation() {
     final mediaWidth = MediaQuery.of(context).size.width;
 
@@ -68,7 +96,14 @@ class OverlappingPanelsState extends State<OverlappingPanels>
         animationController.dispose();
       }
     });
-    if (translate.abs() >= mediaWidth / 2) {
+    double threshold;
+    if (widget.appstate != null &&
+        widget.appstate!.currentMenuSide != RevealSide.main) {
+      threshold = 3 * mediaWidth / 4;
+    } else {
+      threshold = mediaWidth / 4;
+    }
+    if (translate.abs() >= threshold) {
       final multiplier = (translate > 0 ? 1 : -1);
       final goal = _calculateGoal(mediaWidth, multiplier);
       final Tween<double> tween = Tween(begin: translate, end: goal);

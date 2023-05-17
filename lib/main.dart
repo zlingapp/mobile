@@ -29,7 +29,7 @@ class App extends StatelessWidget {
         title: 'Zling Chat',
         theme: lightTheme,
         darkTheme: darkTheme,
-        themeMode: ThemeMode.light,
+        themeMode: ThemeMode.dark,
         home: const DefaultPage(),
       ),
     );
@@ -45,8 +45,6 @@ class DefaultPage extends StatelessWidget {
     // Watch global state and get rebuilt on changes
     var appstate = context.watch<GlobalState>();
 
-    final theme = Theme.of(context);
-
     Widget page;
     if (appstate.loggedIn == null) {
       page = const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -61,6 +59,7 @@ class DefaultPage extends StatelessWidget {
             main: const MessagesView(),
             left: const LeftView(),
             right: const RightView(),
+            appstate: appstate,
             onSideChange: (side) {
               appstate.setMenuSide(side);
             },

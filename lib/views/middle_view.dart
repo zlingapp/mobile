@@ -10,8 +10,13 @@ class MessagesView extends StatelessWidget {
   Widget build(BuildContext context) {
     var appstate = context.watch<GlobalState>();
     var theme = Theme.of(context);
-    return Builder(builder: (context) {
-      return Scaffold(
+    return GestureDetector(
+      onTap: () {
+        if (appstate.currentMenuSide != RevealSide.main) {
+          OverlappingPanels.of(context)?.setCenter();
+        }
+      },
+      child: Scaffold(
         backgroundColor: theme.colorScheme.background,
         appBar: AppBar(
           backgroundColor: theme.colorScheme.secondaryContainer,
@@ -93,7 +98,7 @@ class MessagesView extends StatelessWidget {
                   ))
               .toList(),
         ),
-      );
-    });
+      ),
+    );
   }
 }
