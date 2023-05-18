@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'globals.dart';
 import 'global_state.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 class ApiTokens {
   String accessToken;
@@ -52,22 +53,6 @@ void setTokens(ApiTokens? tokens) {
   prefs.setInt(
       "refreshTokenExpiry", tokens.refreshTokenExpiry.millisecondsSinceEpoch);
 }
-
-enum HttpMethod { post, get }
-
-const String baseURL = String.fromEnvironment("API_URL_BASE");
-const String guildsEndpoint = "$baseURL/guilds";
-const String authEndpoint = "$baseURL/auth";
-const String eventsEndpoint = "$baseURL/events/ws";
-const String logOutEndpoint = "$baseURL/auth/logout";
-const String reissueEndpoint = "$baseURL/auth/reissue";
-const String whoamiEndpoint = "$baseURL/auth/whoami";
-const String logInEndpoint = "$baseURL/auth/login";
-
-Function channelsEndpoint = (String id) => "$baseURL/guilds/$id/channels";
-
-Function messagesEndpoint = (String gid, String cid, int limit) =>
-    "$baseURL/guilds/$gid/channels/$cid/messages?limit=$limit";
 
 DateTime tokenExpiry(String token) {
   final base64Url = token.split(".")[1];
@@ -180,6 +165,7 @@ class ApiService {
     if (!(await tryObtainLocalUser(state))) {
       return false;
     }
+    state.initStream();
     return true;
   }
 
@@ -237,11 +223,49 @@ class ApiService {
       if (response.statusCode == 200) {
         List<Message> messages = messageFromJson(response.body);
         messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-        return messages;
+        return messages
+            .map((e) => Message(
+                author: e.author,
+                content: e.content.trim(),
+                createdAt: e.createdAt,
+                id: e.id))
+            .toList();
       }
     } catch (e) {
       log(e.toString());
     }
     return null;
+  }
+
+  Future<WebSocketChannel?> wsConnect(GlobalState state) async {
+    var tokens = getTokens();
+    if (tokens == null) {
+      logOut(state);
+      return null;
+    }
+    final hasAccessTokenExpired =
+        tokens.accessTokenExpiry.isBefore(DateTime.now());
+    final hasRefreshTokenExpired =
+        tokens.refreshTokenExpiry.isBefore(DateTime.now());
+    if (hasAccessTokenExpired) {
+      if (hasRefreshTokenExpired) {
+        logOut(state);
+        return null;
+      }
+
+      var res = await http.post(Uri.parse(reissueEndpoint),
+          headers: {"Content-Type": "application/json"},
+          body: '{"refreshToken": "${tokens.refreshToken}"}');
+      if (res.statusCode != 200) {
+        logOut(state);
+        return null;
+      }
+
+      var json = jsonDecode(res.body);
+      setTokens(ApiTokens(json["accessToken"], tokenExpiry(json["accessToken"]),
+          json["refreshToken"], tokenExpiry(json["refreshToken"])));
+      tokens = getTokens();
+    }
+    return WebSocketChannel.connect(Uri.parse(wsEndpoint(tokens!.accessToken)));
   }
 }

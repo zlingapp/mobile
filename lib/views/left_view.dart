@@ -32,7 +32,6 @@ class ChannelsView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final appstate = context.watch<GlobalState>();
-    appstate.getChannels();
     return Expanded(
       child: SafeArea(
         child: Container(
@@ -110,28 +109,31 @@ class ChannelsView extends StatelessWidget {
                                 color: Colors.grey),
                           ),
                         ),
-                      ...(appstate.channels == null
-                          ? const [Center(child: CircularProgressIndicator())]
-                          : appstate.channels!
-                              .where((i) => (i.type == "text"))
-                              .map((channel) => ListTile(
-                                    leading: const Icon(Icons.tag),
-                                    selected:
-                                        (appstate.currentChannel == channel),
-                                    horizontalTitleGap: 0,
-                                    visualDensity: const VisualDensity(
-                                        horizontal: 0, vertical: -4),
-                                    title: Text(channel.name),
-                                    onTap: () {
-                                      appstate.setChannel(channel);
-                                      // appstate.prevChannelSelection![appstate
-                                      // .channels!
-                                      // .indexOf(channel)] =
-                                      // appstate.channels!.indexOf(channel);
-                                      appstate.getMessages();
-                                    },
-                                  ))
-                              .toList()),
+                      if (appstate.currentGuild != null)
+                        ...(appstate.channels == null
+                            ? const [Center(child: CircularProgressIndicator())]
+                            : appstate.channels!
+                                .where((i) => (i.type == "text"))
+                                .map((channel) => ListTile(
+                                      leading: const Icon(Icons.tag),
+                                      selected:
+                                          (appstate.currentChannel == channel),
+                                      horizontalTitleGap: 0,
+                                      visualDensity: const VisualDensity(
+                                          horizontal: 0, vertical: -4),
+                                      title: Text(channel.name),
+                                      onTap: () {
+                                        appstate.setChannel(channel);
+                                        appstate.prevChannelSelection[
+                                            appstate.currentGuild!] = channel;
+                                        // appstate.prevChannelSelection![appstate
+                                        // .channels!
+                                        // .indexOf(channel)] =
+                                        // appstate.channels!.indexOf(channel);
+                                        appstate.getMessages();
+                                      },
+                                    ))
+                                .toList()),
                       if (appstate.channels != null &&
                           appstate.channels!
                               .where((i) => (i.type == "voice"))
@@ -200,7 +202,7 @@ class GuildScrollBar extends StatelessWidget {
                     // TODO Replace this with a listview for more fluency - remove guildIndex
                     child: NavigationRail(
                         extended: false,
-                        selectedIndex: appstate.selectedGuildIndex,
+                        selectedIndex: 0, //lol, lmao
                         destinations: [
                           ...appstate.guilds!.asMap().entries.map((entry) {
                             int idx = entry.key;
@@ -209,8 +211,7 @@ class GuildScrollBar extends StatelessWidget {
                               label: Text(x.name),
                               icon: GuildIcon(
                                   iconURL: "https://placeholder.com/32",
-                                  selected:
-                                      (idx == appstate.selectedGuildIndex)),
+                                  selected: (x == appstate.currentGuild)),
                             );
                           }).toList(),
                           const NavigationRailDestination(
@@ -223,6 +224,14 @@ class GuildScrollBar extends StatelessWidget {
                           }
                           appstate.setGuild(appstate.guilds![value]);
                           appstate.getChannels();
+                          if (appstate.prevChannelSelection
+                              .containsKey(appstate.guilds![value])) {
+                            appstate.setChannel(appstate.prevChannelSelection[
+                                appstate.guilds![value]]!);
+                          } else {
+                            appstate.setChannel(null);
+                          }
+                          appstate.getMessages();
                           // appstate.setChannelIndex(
                           // appstate.prevChannelSelection![value]);
                         }),

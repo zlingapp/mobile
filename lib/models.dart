@@ -120,13 +120,20 @@ class Author {
   String id;
   String? nickname;
   String username;
+  late String discriminant;
+  late String name;
+  // String get discriminant => username.split("#")[1];
+  // String
 
   Author({
     required this.avatar,
     required this.id,
     this.nickname,
     required this.username,
-  });
+  }) {
+    discriminant = username.split("#")[1];
+    name = username.split("#")[0];
+  }
 
   @override
   bool operator ==(Object other) {
@@ -217,5 +224,82 @@ class LoginResponse {
         "accessToken": accessToken,
         "refreshToken": refreshToken,
         "user": user.toJson(),
+      };
+}
+
+EventResponse eventResponseFromJson(String str) =>
+    EventResponse.fromJson(json.decode(str));
+
+String eventResponseToJson(EventResponse data) => json.encode(data.toJson());
+
+class EventResponse {
+  Event event;
+  Topic topic;
+
+  EventResponse({
+    required this.event,
+    required this.topic,
+  });
+
+  factory EventResponse.fromJson(Map<String, dynamic> json) => EventResponse(
+        event: Event.fromJson(json["event"]),
+        topic: Topic.fromJson(json["topic"]),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "event": event.toJson(),
+        "topic": topic.toJson(),
+      };
+}
+
+class Event {
+  Author author;
+  String content;
+  DateTime createdAt;
+  String id;
+  String type;
+
+  Event({
+    required this.author,
+    required this.content,
+    required this.createdAt,
+    required this.id,
+    required this.type,
+  });
+
+  factory Event.fromJson(Map<String, dynamic> json) => Event(
+        author: Author.fromJson(json["author"]),
+        content: json["content"],
+        createdAt: DateTime.parse(json["created_at"]),
+        id: json["id"],
+        type: json["type"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "author": author.toJson(),
+        "content": content,
+        "created_at": createdAt.toIso8601String(),
+        "id": id,
+        "type": type,
+      };
+}
+
+class Topic {
+  String id;
+  String type;
+
+  Topic({
+    required this.id,
+    required this.type,
+  });
+
+  factory Topic.fromJson(Map<String, dynamic> json) => Topic(
+        id: json["id"],
+        type: json["type"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "id": id,
+        "type": type,
       };
 }

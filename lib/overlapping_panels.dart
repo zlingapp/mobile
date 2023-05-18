@@ -81,6 +81,9 @@ class OverlappingPanelsState extends State<OverlappingPanels>
   }
 
   void _onApplyTranslation() {
+    if (widget.appstate?.inMove == true) {
+      widget.appstate?.stationary();
+    }
     final mediaWidth = MediaQuery.of(context).size.width;
 
     final animationController = AnimationController(
@@ -163,6 +166,9 @@ class OverlappingPanelsState extends State<OverlappingPanels>
   }
 
   void onTranslate(double delta) {
+    if (widget.appstate?.inMove == false) {
+      widget.appstate?.moving();
+    }
     setState(() {
       final translate = this.translate + delta;
       if (translate < 0 && widget.right != null ||
