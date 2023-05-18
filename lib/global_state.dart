@@ -13,7 +13,7 @@ class GlobalState extends ChangeNotifier {
   Guild? currentGuild;
   void setGuildIndex(int idx) {
     selectedGuildIndex = idx;
-    if (guilds == null) {
+    if (guilds == null || idx >= guilds!.length) {
       currentGuild == null;
     } else {
       currentGuild == guilds![idx];
@@ -21,13 +21,9 @@ class GlobalState extends ChangeNotifier {
     notifyListeners();
   }
 
-  var selectedChannelIndex = 0;
   Channel? currentChannel;
-  void setChannelIndex(int idx) {
-    selectedChannelIndex = idx;
-    if (channels != null && channels!.isNotEmpty) {
-      currentChannel = channels![idx];
-    }
+  void setChannel(Channel channel) {
+    currentChannel = channel;
     notifyListeners();
   }
 
@@ -52,19 +48,18 @@ class GlobalState extends ChangeNotifier {
 
   List<Channel>? channels;
   void getChannels() async {
-    if (guilds == null || guilds!.isEmpty) {
+    if (currentGuild == null) {
       return;
     }
-    channels =
-        (await ApiService().getChannels(guilds![selectedGuildIndex].id, this));
+    channels = (await ApiService().getChannels(currentGuild!.id, this));
     notifyListeners();
   }
 
   List<Message>? messages = [];
   void getMessages({int limit = 50}) async {
-    if (guilds == null || guilds!.isEmpty) return;
-    messages = (await ApiService().getMessages(guilds![selectedGuildIndex].id,
-        channels![selectedChannelIndex].id, limit, this));
+    if (currentGuild == null || currentChannel == null) return;
+    messages = (await ApiService()
+        .getMessages(currentGuild!.id, currentChannel!.id, limit, this));
     notifyListeners();
   }
 
