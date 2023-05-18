@@ -127,11 +127,13 @@ class ChannelsView extends StatelessWidget {
                                         horizontal: 0, vertical: -4),
                                     title: Text(channel.name),
                                     onTap: () {
+                                      print(appstate.channels);
                                       appstate.setChannelIndex(
                                           appstate.channels!.indexOf(channel));
                                       appstate.prevChannelSelection![
                                               appstate.selectedGuildIndex] =
                                           appstate.channels!.indexOf(channel);
+                                      appstate.getMessages();
                                     },
                                   ))
                               .toList()),

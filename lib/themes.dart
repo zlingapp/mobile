@@ -11,6 +11,6 @@ ThemeData lightTheme = ThemeData(
 ThemeData darkTheme = ThemeData(
   useMaterial3: true,
   colorScheme: ColorScheme.fromSeed(
-      seedColor: Colors.deepPurple, brightness: Brightness.dark),
+      seedColor: const Color(0xFF7289DA), brightness: Brightness.dark),
   fontFamily: "Whitney",
 );

@@ -60,7 +60,13 @@ class GlobalState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // List<Message>? messages = [];
+  List<Message>? messages = [];
+  void getMessages({int limit = 50}) async {
+    if (guilds == null || guilds!.isEmpty) return;
+    messages = (await ApiService().getMessages(guilds![selectedGuildIndex].id,
+        channels![selectedChannelIndex].id, limit, this));
+    notifyListeners();
+  }
 
   void ensureLoggedIn() async {
     loggedIn = (await ApiService().ensureLoggedIn(this));
