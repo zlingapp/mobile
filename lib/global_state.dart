@@ -21,6 +21,11 @@ class GlobalState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setGuild(Guild guild) {
+    currentGuild = guild;
+    notifyListeners();
+  }
+
   Channel? currentChannel;
   void setChannel(Channel channel) {
     currentChannel = channel;

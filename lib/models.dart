@@ -17,6 +17,14 @@ class Guild {
     required this.name,
   });
 
+  @override
+  bool operator ==(Object other) {
+    return other is Guild && other.id == id;
+  }
+
+  @override
+  int get hashCode => Object.hash(id, "");
+
   factory Guild.fromJson(Map<String, dynamic> json) => Guild(
         id: json["id"],
         name: json["name"],
@@ -44,6 +52,13 @@ class Channel {
     required this.name,
     required this.type,
   });
+  @override
+  bool operator ==(Object other) {
+    return other is Channel && other.id == id;
+  }
+
+  @override
+  int get hashCode => Object.hash(id, "");
 
   factory Channel.fromJson(Map<String, dynamic> json) => Channel(
         id: json["id"],
@@ -77,6 +92,14 @@ class Message {
     required this.id,
   });
 
+  @override
+  bool operator ==(Object other) {
+    return other is Message && other.id == id;
+  }
+
+  @override
+  int get hashCode => Object.hash(id, "");
+
   factory Message.fromJson(Map<String, dynamic> json) => Message(
         author: Author.fromJson(json["author"]),
         content: json["content"],
@@ -104,6 +127,14 @@ class Author {
     this.nickname,
     required this.username,
   });
+
+  @override
+  bool operator ==(Object other) {
+    return other is Author && other.id == id;
+  }
+
+  @override
+  int get hashCode => Object.hash(id, "");
 
   factory Author.fromJson(Map<String, dynamic> json) => Author(
         avatar: json["avatar"],
@@ -136,6 +167,14 @@ class User {
     required this.avatar,
     required this.email,
   });
+
+  @override
+  bool operator ==(Object other) {
+    return other is User && other.id == id;
+  }
+
+  @override
+  int get hashCode => Object.hash(id, "");
 
   factory User.fromJson(Map<String, dynamic> json) => User(
         id: json["id"],
