@@ -57,6 +57,9 @@ class OverlappingPanelsState extends State<OverlappingPanels>
   }
 
   void setCenter() {
+    if (widget.appstate?.inMove == false) {
+      widget.appstate?.moving();
+    }
     if (widget.appstate == null ||
         widget.appstate!.currentMenuSide == RevealSide.main) return;
     final animationController = AnimationController(
@@ -81,9 +84,6 @@ class OverlappingPanelsState extends State<OverlappingPanels>
   }
 
   void _onApplyTranslation() {
-    if (widget.appstate?.inMove == true) {
-      widget.appstate?.stationary();
-    }
     final mediaWidth = MediaQuery.of(context).size.width;
 
     final animationController = AnimationController(
@@ -91,6 +91,9 @@ class OverlappingPanelsState extends State<OverlappingPanels>
 
     animationController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
+        if (widget.appstate?.inMove == true) {
+          widget.appstate?.stationary();
+        }
         if (widget.onSideChange != null) {
           widget.onSideChange!(translate == 0
               ? RevealSide.main

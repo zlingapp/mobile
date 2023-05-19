@@ -58,7 +58,7 @@ class DefaultPage extends StatelessWidget {
                 50, // Width of the main panel still shown if a side panel is focused
             main: const MessagesView(),
             left: const LeftView(),
-            right: const RightView(),
+            right: null,
             appstate: appstate,
             onSideChange: (side) {
               appstate.setMenuSide(side);

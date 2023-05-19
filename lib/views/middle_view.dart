@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:zling/overlapping_panels.dart';
 import 'package:provider/provider.dart';
 import '../global_state.dart';
-import 'dart:ui';
 import '../models.dart';
+import '../api.dart';
+import 'package:intl/intl.dart';
 
 class MessagesView extends StatelessWidget {
   const MessagesView({Key? key}) : super(key: key);
@@ -13,74 +14,78 @@ class MessagesView extends StatelessWidget {
     var appstate = context.watch<GlobalState>();
     var theme = Theme.of(context);
     var panels = OverlappingPanels.of(context);
-    double blur;
+    int dim;
     if (panels == null) {
-      blur = 0;
+      dim = 0;
     } else {
-      blur = (appstate.currentMenuSide != RevealSide.main && !appstate.inMove)
+      dim = (appstate.currentMenuSide != RevealSide.main && !appstate.inMove)
           ? 1
           : 0;
     }
     return GestureDetector(
-      onTap: () {
-        if (appstate.currentMenuSide != RevealSide.main) {
-          OverlappingPanels.of(context)?.setCenter();
-        }
-      },
-      child: ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-        child: Scaffold(
-          backgroundColor: theme.colorScheme.background,
-          appBar: AppBar(
-            backgroundColor: theme.colorScheme.secondaryContainer,
-            title: Row(
-              children: [
-                if (appstate.currentChannel != null)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [
-                        const Text(
-                          '#',
-                          style: TextStyle(color: Colors.white54),
-                        ),
-                        Text(appstate.currentChannel!.name)
-                      ]),
-                    ],
-                  ),
+        onTap: () {
+          if (appstate.currentMenuSide != RevealSide.main) {
+            OverlappingPanels.of(context)?.setCenter();
+          }
+        },
+        child: ColorFiltered(
+          colorFilter: ColorFilter.mode(
+              Colors.black.withOpacity(0.5 * dim), BlendMode.darken),
+          child: Scaffold(
+            resizeToAvoidBottomInset: true,
+            backgroundColor: theme.colorScheme.background,
+            appBar: AppBar(
+              backgroundColor: theme.colorScheme.secondaryContainer,
+              title: Row(
+                children: [
+                  if (appstate.currentChannel != null)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          const Text(
+                            '#',
+                            style: TextStyle(color: Colors.white54),
+                          ),
+                          Text(appstate.currentChannel!.name)
+                        ]),
+                      ],
+                    ),
+                ],
+              ),
+              leading: IconButton(
+                icon: const Icon(Icons.menu),
+                onPressed: () {
+                  OverlappingPanels.of(context)?.reveal(RevealSide.left);
+                },
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.call),
+                  onPressed: () {
+                    OverlappingPanels.of(context)?.reveal(RevealSide.right);
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.camera_alt),
+                  onPressed: () {
+                    OverlappingPanels.of(context)?.reveal(RevealSide.right);
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.group),
+                  onPressed: () {
+                    OverlappingPanels.of(context)?.reveal(RevealSide.right);
+                  },
+                )
               ],
             ),
-            leading: IconButton(
-              icon: const Icon(Icons.menu),
-              onPressed: () {
-                OverlappingPanels.of(context)?.reveal(RevealSide.left);
-              },
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.call),
-                onPressed: () {
-                  OverlappingPanels.of(context)?.reveal(RevealSide.right);
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.camera_alt),
-                onPressed: () {
-                  OverlappingPanels.of(context)?.reveal(RevealSide.right);
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.group),
-                onPressed: () {
-                  OverlappingPanels.of(context)?.reveal(RevealSide.right);
-                },
-              )
-            ],
+            body: Column(children: [
+              const MessageList(),
+              if (appstate.currentChannel != null) const MessageSendDialog(),
+            ]),
           ),
-          body: const MessageList(),
-        ),
-      ),
-    );
+        ));
   }
 }
 
@@ -91,62 +96,238 @@ class MessageList extends StatelessWidget {
   Widget build(BuildContext context) {
     final appstate = context.watch<GlobalState>();
     final theme = Theme.of(context);
-    if (appstate.messages == null) return const SizedBox();
-    if (appstate.messages!.isEmpty) return const Text("Empty");
+    if (appstate.messages == null || appstate.currentChannel == null) {
+      return const SizedBox();
+    }
+    if (appstate.messages!.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(48.0),
+        child: SizedBox(
+          width: MediaQuery.of(context).size.width,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                "No Messages Here",
+                style: theme.textTheme.displaySmall?.copyWith(fontSize: 24),
+              ),
+              const SizedBox(
+                height: 16,
+              ),
+              const Icon(Icons.bedtime, color: Colors.grey, size: 48)
+            ],
+          ),
+        ),
+      );
+    }
     double imgsize = 18.0;
 
-    return ListView(
-      children: [
-        ...appstate.messages!.asMap().entries.map((entry) {
-          int idx = entry.key;
-          Message message = entry.value;
-          Message? prevMessage =
-              (idx == 0 ? null : appstate.messages![idx - 1]);
-          if (prevMessage == null ||
-              (prevMessage.author != message.author) ||
-              (prevMessage.author.id == message.author.id &&
-                  message.createdAt.isAfter(prevMessage.createdAt
-                      .add(const Duration(minutes: 10))))) {
-            // Here we need an icon and username
-            return Padding(
-              padding: const EdgeInsets.only(left: 24, top: 8),
-              child: Row(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(48), // Image border
-                      child: SizedBox.fromSize(
-                        size: Size.fromRadius(imgsize), // Image radius
-                        child: Image.network(
-                            "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png",
-                            fit: BoxFit.cover),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: Column(
+    return Expanded(
+      child: ListView(
+        reverse: true,
+        shrinkWrap: true,
+        scrollDirection: Axis.vertical,
+        children: [
+          const SizedBox(height: 32),
+          ...appstate.messages!
+              .asMap()
+              .entries
+              .map((entry) {
+                int idx = entry.key;
+                Message message = entry.value;
+                Message? prevMessage =
+                    (idx == 0 ? null : appstate.messages![idx - 1]);
+                if (prevMessage == null ||
+                    (prevMessage.author != message.author) ||
+                    (prevMessage.author.id == message.author.id &&
+                        message.createdAt.isAfter(prevMessage.createdAt
+                            .add(const Duration(minutes: 10))))) {
+                  // Here we need an icon and username
+                  return Padding(
+                    padding: const EdgeInsets.only(left: 24, top: 8, right: 16),
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(message.author.nickname ?? message.author.name,
-                            style: theme.textTheme.bodyLarge!
-                                .copyWith(color: Colors.grey)),
-                        Text(message.content, style: theme.textTheme.bodyLarge),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: ClipRRect(
+                            borderRadius:
+                                BorderRadius.circular(48), // Image border
+                            child: SizedBox.fromSize(
+                              size: Size.fromRadius(imgsize), // Image radius
+                              child: Image.network(
+                                  "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png",
+                                  fit: BoxFit.cover),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                        message.author.nickname ??
+                                            message.author.name,
+                                        style: theme.primaryTextTheme.bodyLarge!
+                                            .copyWith(
+                                                color: const Color.fromARGB(
+                                                    255, 170, 170, 170),
+                                                fontWeight: FontWeight.w600)),
+                                    const SizedBox(width: 4),
+                                    Text(formatTime(message.createdAt),
+                                        style: theme
+                                            .primaryTextTheme.labelMedium!
+                                            .copyWith(
+                                                color: const Color.fromARGB(
+                                                    255, 132, 131, 131)))
+                                  ],
+                                ),
+                                Text(
+                                  message.content,
+                                  style: theme.textTheme.bodyLarge,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     ),
+                  );
+                }
+                // just message here
+                return Padding(
+                  padding: EdgeInsets.only(left: imgsize + 50, right: 16),
+                  child: Text(
+                    message.content,
+                    style: theme.textTheme.bodyLarge,
                   ),
+                );
+              })
+              .toList()
+              .reversed
+              .toList(),
+        ],
+      ),
+    );
+  }
+}
+
+class MessageSendDialog extends StatefulWidget {
+  const MessageSendDialog({super.key});
+
+  @override
+  State<MessageSendDialog> createState() => _MessageSendDialogState();
+}
+
+class _MessageSendDialogState extends State<MessageSendDialog> {
+  String _currentMessage = "";
+  final _controller = TextEditingController();
+
+  void _send(GlobalState appstate) {
+    if (_currentMessage.trim() == "") {
+      return;
+    }
+    ApiService()
+        .sendMessage(appstate.currentGuild!.id, appstate.currentChannel!.id,
+            _currentMessage, appstate)
+        .then((value) {
+      if (value == true) {
+        setState(() {
+          _currentMessage = "";
+          _controller.clear();
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var appstate = context.watch<GlobalState>();
+    var theme = Theme.of(context);
+    return SafeArea(
+      child: Container(
+        width: MediaQuery.of(context).size.width,
+        color: theme.colorScheme.secondaryContainer,
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.max,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  IconButton(
+                      onPressed: () {}, icon: const Icon(Icons.add, size: 24)),
+                  Expanded(
+                    child: TextField(
+                      maxLines: 1,
+                      maxLength: 2000,
+                      controller: _controller,
+                      autocorrect: false,
+                      style: theme.primaryTextTheme.bodyMedium!
+                          .copyWith(fontSize: 14),
+                      onChanged: (value) => {
+                        setState(() {
+                          _currentMessage = value;
+                        })
+                      },
+                      onEditingComplete: () => FocusScope.of(context).unfocus(),
+                      onSubmitted: ((_) => {_send(appstate)}),
+                      onTapOutside: ((_) => {FocusScope.of(context).unfocus()}),
+                      decoration: InputDecoration(
+                          fillColor: theme.colorScheme.onSecondaryContainer,
+                          counterText: "",
+                          border: const OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(28))),
+                          hintText:
+                              "Message #${appstate.currentChannel?.name}"),
+                    ),
+                  ),
+                  IconButton(
+                      onPressed: () {
+                        _send(appstate);
+                      },
+                      icon: const Icon(Icons.send, size: 24)),
+                  IconButton(
+                      onPressed: () {},
+                      icon: const Icon(Icons.emoji_emotions, size: 24)),
                 ],
               ),
-            );
-          }
-          // just message here
-          return Padding(
-            padding: EdgeInsets.only(left: imgsize + 50),
-            child: Text(message.content, style: theme.textTheme.bodyLarge),
-          );
-        }).toList()
-      ],
+            ],
+          ),
+        ),
+      ),
     );
+  }
+}
+
+final timeF = DateFormat("HH:mm");
+final dateF = DateFormat("dd/MM");
+final dateYearF = DateFormat("dd/MM/yyyy");
+String formatTime(DateTime time) {
+  time = time.toLocal();
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final yesterday = DateTime(now.year, now.month, now.day - 1);
+
+  final day = DateTime(time.year, time.month, time.day);
+  if (day == today) {
+    return "Today at ${timeF.format(time)}";
+  } else if (day == yesterday) {
+    return "Yesterday at ${timeF.format(time)}";
+  } else {
+    if (time.year == now.year) {
+      return "${dateF.format(time)} at ${timeF.format(time)}";
+    } else {
+      return "${dateYearF.format(time)} at ${timeF.format(time)}";
+    }
   }
 }

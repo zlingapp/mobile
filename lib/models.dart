@@ -103,7 +103,7 @@ class Message {
   factory Message.fromJson(Map<String, dynamic> json) => Message(
         author: Author.fromJson(json["author"]),
         content: json["content"],
-        createdAt: DateTime.parse(json["created_at"]),
+        createdAt: DateTime.parse(json["created_at"] + "Z"),
         id: json["id"],
       );
 
@@ -270,7 +270,7 @@ class Event {
   factory Event.fromJson(Map<String, dynamic> json) => Event(
         author: Author.fromJson(json["author"]),
         content: json["content"],
-        createdAt: DateTime.parse(json["created_at"]),
+        createdAt: DateTime.parse(json["created_at"] + "Z"),
         id: json["id"],
         type: json["type"],
       );

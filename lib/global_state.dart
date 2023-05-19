@@ -81,7 +81,7 @@ class GlobalState extends ChangeNotifier {
   }
 
   List<Message>? messages = [];
-  void getMessages({int limit = 50}) async {
+  Future<void> getMessages({int limit = 50}) async {
     if (currentGuild == null || currentChannel == null) {
       messages = [];
       notifyListeners();
@@ -89,6 +89,9 @@ class GlobalState extends ChangeNotifier {
     }
     messages = (await ApiService()
         .getMessages(currentGuild!.id, currentChannel!.id, limit, this));
+    if (messages != null) {
+      messages = messages?.where((e) => e.content.trim() != "").toList();
+    }
     notifyListeners();
   }
 
@@ -103,10 +106,17 @@ class GlobalState extends ChangeNotifier {
   }
 
   WebSocketChannel? ws;
+  bool socketReconnecting = false;
   void initStream() async {
+    if (socketReconnecting = true) {
+      await Future.delayed(const Duration(seconds: 5));
+    }
+    socketReconnecting = false;
     ws = await ApiService().wsConnect(this);
-    ws!.stream.listen(handleEvent,
-        onError: (error) => print(error), onDone: () => initStream());
+    ws!.stream.listen(handleEvent, onDone: () {
+      socketReconnecting = true;
+      initStream();
+    });
     ws!.sink.add("heartbeat");
     return;
   }
@@ -132,6 +142,7 @@ class GlobalState extends ChangeNotifier {
     }
   }
 
+  final msgScrollController = ScrollController();
   Timer? timer;
 
   Future<bool> login(String email, String password) async {
@@ -142,6 +153,7 @@ class GlobalState extends ChangeNotifier {
     }
     Globals.localUser = res;
     loggedIn = true;
+    initStream();
     getGuilds();
     getChannels();
     notifyListeners();
@@ -161,7 +173,7 @@ class GlobalState extends ChangeNotifier {
 
   @override
   void dispose() {
-    timer?.cancel;
+    timer?.cancel();
     ws?.sink.close();
     super.dispose();
   }

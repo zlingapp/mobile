@@ -30,3 +30,6 @@ Function channelsEndpoint = (String id) => "$baseURL/guilds/$id/channels";
 
 Function messagesEndpoint = (String gid, String cid, int limit) =>
     "$baseURL/guilds/$gid/channels/$cid/messages?limit=$limit";
+
+Function sendMessageEndpoint =
+    (String gid, String cid) => "$baseURL/guilds/$gid/channels/$cid/messages";

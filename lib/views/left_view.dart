@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:zling/models.dart';
+import 'package:zling/overlapping_panels.dart';
 import '../global_state.dart';
 
 class LeftView extends StatelessWidget {
@@ -53,7 +54,7 @@ class ChannelsView extends StatelessWidget {
                       children: [
                         Expanded(
                             child: appstate.currentGuild == null
-                                ? const Text("...",
+                                ? const Text("No Server Selected",
                                     style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 18))
@@ -68,10 +69,10 @@ class ChannelsView extends StatelessWidget {
                             icon: const Icon(Icons.more_horiz))
                       ],
                     ),
-                    const Text(
-                      "server description",
-                      style: TextStyle(color: Colors.grey),
-                    )
+                    //const Text(
+                    //  "server description",
+                    //  style: TextStyle(color: Colors.grey),
+                    // )
                   ],
                 ),
               ),
@@ -130,7 +131,10 @@ class ChannelsView extends StatelessWidget {
                                         // .channels!
                                         // .indexOf(channel)] =
                                         // appstate.channels!.indexOf(channel);
-                                        appstate.getMessages();
+                                        appstate.getMessages().then((value) => {
+                                              OverlappingPanels.of(context)
+                                                  ?.setCenter()
+                                            });
                                       },
                                     ))
                                 .toList()),
@@ -149,22 +153,24 @@ class ChannelsView extends StatelessWidget {
                                 color: Colors.grey),
                           ),
                         ),
-                      ...(appstate.channels == null
-                          ? const [Center(child: CircularProgressIndicator())]
-                          : appstate.channels!
-                              .where((i) => i.type == "voice")
-                              .map((channel) => ListTile(
-                                    leading: const Icon(Icons.headphones),
-                                    selected:
-                                        // REPLACE HERE WITH VOICE INDEX
-                                        appstate.currentChannel != null &&
-                                            appstate.currentChannel == channel,
-                                    horizontalTitleGap: 0,
-                                    title: Text(channel.name),
-                                    onTap: () {
-                                      // Voice Stuff Here
-                                    },
-                                  )))
+                      if (appstate.currentGuild != null)
+                        ...(appstate.channels == null
+                            ? const []
+                            : appstate.channels!
+                                .where((i) => i.type == "voice")
+                                .map((channel) => ListTile(
+                                      leading: const Icon(Icons.headphones),
+                                      selected:
+                                          // REPLACE HERE WITH VOICE INDEX
+                                          appstate.currentChannel != null &&
+                                              appstate.currentChannel ==
+                                                  channel,
+                                      horizontalTitleGap: 0,
+                                      title: Text(channel.name),
+                                      onTap: () {
+                                        // Voice Stuff Here
+                                      },
+                                    )))
                     ],
                   ),
                 ),
@@ -205,7 +211,6 @@ class GuildScrollBar extends StatelessWidget {
                         selectedIndex: 0, //lol, lmao
                         destinations: [
                           ...appstate.guilds!.asMap().entries.map((entry) {
-                            int idx = entry.key;
                             Guild x = entry.value;
                             return NavigationRailDestination(
                               label: Text(x.name),

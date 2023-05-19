@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:core';
 import 'dart:io';
 import 'package:zling/models.dart';
@@ -84,7 +85,7 @@ class ApiService {
       if (response == null) {
         return null;
       }
-      if (response.statusCode == 200) {
+      if (200 <= response.statusCode && response.statusCode < 300) {
         List<Guild> guilds = guildFromJson(response.body);
         return guilds;
       }
@@ -94,9 +95,39 @@ class ApiService {
     return null;
   }
 
+  Future<bool> sendMessage(
+      String gid, String cid, String message, GlobalState state) async {
+    if (message.length > 2000) {
+      message = message.substring(1, 2000);
+    }
+    message = message.trim();
+    http.Response? resp = await authFetch(
+        HttpMethod.post, sendMessageEndpoint(gid, cid), state,
+        body: json.encode({"content": message}));
+    return resp != null;
+  }
+
+  bool loggingIn = false;
+  List<Completer> queue = [];
+  Future<void> waitUntilLoggedIn() {
+    var completer = Completer();
+    queue.add(completer);
+    return completer.future;
+  }
+
+  void completeLogin() {
+    loggingIn = false;
+    for (var c in queue) {
+      c.complete();
+    }
+  }
+
   Future<http.Response?> authFetch(
       HttpMethod method, String endpoint, GlobalState state,
       {Map<String, String>? headers, String? body}) async {
+    if (loggingIn == true) {
+      await waitUntilLoggedIn();
+    }
     ApiTokens? tokens = getTokens();
     if (tokens != null) {
       final hasAccessTokenExpired =
@@ -106,14 +137,16 @@ class ApiService {
       if (hasAccessTokenExpired) {
         if (hasRefreshTokenExpired) {
           logOut(state);
+          completeLogin();
           return null;
         }
-
+        loggingIn = true;
         var res = await http.post(Uri.parse(reissueEndpoint),
             headers: {"Content-Type": "application/json"},
             body: '{"refreshToken": "${tokens.refreshToken}"}');
         if (res.statusCode != 200) {
           logOut(state);
+          completeLogin();
           return null;
         }
 
@@ -127,7 +160,11 @@ class ApiService {
       }
       headers ??= {};
       if (tokens != null) {
-        headers = {...headers, "Authorization": "Bearer ${tokens.accessToken}"};
+        headers = {
+          ...headers,
+          "Content-Type": "application/json",
+          "Authorization": "Bearer ${tokens.accessToken}"
+        };
       }
     }
     http.Response res;
@@ -141,6 +178,7 @@ class ApiService {
             await http.post(Uri.parse(endpoint), headers: headers, body: body);
         break;
     }
+    completeLogin();
     return res;
   }
 
@@ -148,7 +186,7 @@ class ApiService {
     if (Globals.localUser == null) {
       try {
         var res = await authFetch(HttpMethod.get, whoamiEndpoint, state);
-        if (res != null && res.statusCode == 200) {
+        if (res != null && 200 <= res.statusCode && res.statusCode < 300) {
           Globals.localUser = userFromJson(res.body);
         }
       } catch (e) {
@@ -174,11 +212,13 @@ class ApiService {
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"email": email, "password": password}));
     if (res == null || res.statusCode != 200) {
+      completeLogin();
       return null;
     }
     var resObj = loginResponseFromJson(res.body);
     setTokens(ApiTokens(resObj.accessToken, tokenExpiry(resObj.accessToken),
         resObj.refreshToken, tokenExpiry(resObj.refreshToken)));
+    completeLogin();
     return resObj.user;
   }
 
@@ -199,7 +239,7 @@ class ApiService {
       if (response == null) {
         return null;
       }
-      if (response.statusCode == 200) {
+      if (200 <= response.statusCode && response.statusCode < 300) {
         List<Channel> channels = channelFromJson(response.body);
         return channels;
       }
@@ -220,7 +260,7 @@ class ApiService {
       if (response == null) {
         return null;
       }
-      if (response.statusCode == 200) {
+      if (200 <= response.statusCode && response.statusCode < 300) {
         List<Message> messages = messageFromJson(response.body);
         messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
         return messages
