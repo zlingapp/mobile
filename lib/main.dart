@@ -9,7 +9,9 @@ import 'views/left_view.dart';
 import 'global_state.dart';
 import 'globals.dart';
 import 'views/middle_view.dart';
-import 'views/right_view.dart';
+import 'package:logging/logging.dart';
+import 'dart:developer';
+// import 'views/right_view.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -22,6 +24,11 @@ class App extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    Logger.root.level = Level.ALL;
+    Logger.root.onRecord.listen((event) {
+      log("${event.loggerName}-${event.level}: ${event.message}",
+          time: event.time);
+    });
     HttpOverrides.global = AllowSelfSigned();
     return ChangeNotifierProvider(
       create: (context) => GlobalState(),

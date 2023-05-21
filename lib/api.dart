@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'globals.dart';
 import 'global_state.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:logging/logging.dart';
 
 class ApiTokens {
   String accessToken;
@@ -79,6 +80,7 @@ class AllowSelfSigned extends HttpOverrides {
 }
 
 class ApiService {
+  final _logger = Logger("ApiService");
   Future<List<Guild>?> getGuilds(GlobalState state) async {
     try {
       var response = await authFetch(HttpMethod.get, guildsEndpoint, state);
@@ -136,15 +138,18 @@ class ApiService {
           tokens.refreshTokenExpiry.isBefore(DateTime.now());
       if (hasAccessTokenExpired) {
         if (hasRefreshTokenExpired) {
+          _logger.info("Refresh token expired, requesting logout");
           logOut(state);
           completeLogin();
           return null;
         }
         loggingIn = true;
+        _logger.info("Requesting reissue");
         var res = await http.post(Uri.parse(reissueEndpoint),
             headers: {"Content-Type": "application/json"},
             body: '{"refreshToken": "${tokens.refreshToken}"}');
         if (res.statusCode != 200) {
+          _logger.info("Reissue failed, logging out");
           logOut(state);
           completeLogin();
           return null;
@@ -203,7 +208,6 @@ class ApiService {
     if (!(await tryObtainLocalUser(state))) {
       return false;
     }
-    state.initStream();
     return true;
   }
 
@@ -278,9 +282,13 @@ class ApiService {
   }
 
   Future<WebSocketChannel?> wsConnect(GlobalState state) async {
+    if (loggingIn == true) {
+      await waitUntilLoggedIn();
+    }
     var tokens = getTokens();
     if (tokens == null) {
       logOut(state);
+      completeLogin();
       return null;
     }
     final hasAccessTokenExpired =
@@ -289,15 +297,18 @@ class ApiService {
         tokens.refreshTokenExpiry.isBefore(DateTime.now());
     if (hasAccessTokenExpired) {
       if (hasRefreshTokenExpired) {
+        _logger.info("Refresh token expired, requesting logout");
         logOut(state);
+        completeLogin();
         return null;
       }
-
+      _logger.info("Requesting reissue from websocket connect");
       var res = await http.post(Uri.parse(reissueEndpoint),
           headers: {"Content-Type": "application/json"},
           body: '{"refreshToken": "${tokens.refreshToken}"}');
       if (res.statusCode != 200) {
         logOut(state);
+        completeLogin();
         return null;
       }
 
@@ -306,6 +317,7 @@ class ApiService {
           json["refreshToken"], tokenExpiry(json["refreshToken"])));
       tokens = getTokens();
     }
+    completeLogin();
     return WebSocketChannel.connect(Uri.parse(wsEndpoint(tokens!.accessToken)));
   }
 }

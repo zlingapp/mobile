@@ -5,12 +5,15 @@ import '../global_state.dart';
 import '../models.dart';
 import '../api.dart';
 import 'package:intl/intl.dart';
+import 'package:logging/logging.dart';
 
 class MessagesView extends StatelessWidget {
   const MessagesView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final logger = Logger("MessagesView");
+
     var appstate = context.watch<GlobalState>();
     var theme = Theme.of(context);
     var panels = OverlappingPanels.of(context);
@@ -81,6 +84,33 @@ class MessagesView extends StatelessWidget {
               ],
             ),
             body: Column(children: [
+              if (appstate.ws == null && appstate.socketReconnecting == false)
+                Container(
+                    color: theme.colorScheme.errorContainer,
+                    child: Row(children: [
+                      const SizedBox(width: 12),
+                      Text("Socket not connected (?!?)",
+                          style: theme.textTheme.bodyLarge!.copyWith(
+                              color: theme.colorScheme.onErrorContainer)),
+                      const Spacer(),
+                      if (appstate.socketConnectingFromBroken)
+                        const CircularProgressIndicator(),
+                      ElevatedButton(
+                          onPressed: () {
+                            if (!appstate.socketConnectingFromBroken) {
+                              logger.info(
+                                  "Socket reconnecting from broken state");
+                              appstate.reconnectingFromBroken();
+                              appstate.initStream();
+                              appstate.socketConnectingFromBroken = false;
+                            }
+                          },
+                          child: Text(
+                            "Connect",
+                            style: theme.textTheme.bodyLarge!.copyWith(
+                                color: theme.colorScheme.onErrorContainer),
+                          ))
+                    ])),
               const MessageList(),
               if (appstate.currentChannel != null) const MessageSendDialog(),
             ]),
@@ -100,22 +130,24 @@ class MessageList extends StatelessWidget {
       return const SizedBox();
     }
     if (appstate.messages!.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(48.0),
-        child: SizedBox(
-          width: MediaQuery.of(context).size.width,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                "No Messages Here",
-                style: theme.textTheme.displaySmall?.copyWith(fontSize: 24),
-              ),
-              const SizedBox(
-                height: 16,
-              ),
-              const Icon(Icons.bedtime, color: Colors.grey, size: 48)
-            ],
+      return Expanded(
+        child: Padding(
+          padding: const EdgeInsets.all(48.0),
+          child: SizedBox(
+            width: MediaQuery.of(context).size.width,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  "No Messages Here",
+                  style: theme.textTheme.displaySmall?.copyWith(fontSize: 24),
+                ),
+                const SizedBox(
+                  height: 16,
+                ),
+                const Icon(Icons.bedtime, color: Colors.grey, size: 48),
+              ],
+            ),
           ),
         ),
       );
@@ -128,7 +160,7 @@ class MessageList extends StatelessWidget {
         shrinkWrap: true,
         scrollDirection: Axis.vertical,
         children: [
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
           ...appstate.messages!
               .asMap()
               .entries
@@ -249,6 +281,10 @@ class _MessageSendDialogState extends State<MessageSendDialog> {
   Widget build(BuildContext context) {
     var appstate = context.watch<GlobalState>();
     var theme = Theme.of(context);
+    if (appstate.inMove) {
+      // Close keyboard when moving
+      FocusScope.of(context).unfocus();
+    }
     return SafeArea(
       child: Container(
         width: MediaQuery.of(context).size.width,
@@ -266,29 +302,36 @@ class _MessageSendDialogState extends State<MessageSendDialog> {
                   IconButton(
                       onPressed: () {}, icon: const Icon(Icons.add, size: 24)),
                   Expanded(
-                    child: TextField(
-                      maxLines: 1,
-                      maxLength: 2000,
-                      controller: _controller,
-                      autocorrect: false,
-                      style: theme.primaryTextTheme.bodyMedium!
-                          .copyWith(fontSize: 14),
-                      onChanged: (value) => {
-                        setState(() {
-                          _currentMessage = value;
-                        })
-                      },
-                      onEditingComplete: () => FocusScope.of(context).unfocus(),
-                      onSubmitted: ((_) => {_send(appstate)}),
-                      onTapOutside: ((_) => {FocusScope.of(context).unfocus()}),
-                      decoration: InputDecoration(
-                          fillColor: theme.colorScheme.onSecondaryContainer,
-                          counterText: "",
-                          border: const OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(28))),
-                          hintText:
-                              "Message #${appstate.currentChannel?.name}"),
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.all(Radius.circular(28)),
+                      child: Container(
+                        color: theme.colorScheme.onInverseSurface,
+                        child: TextField(
+                          maxLines: 1,
+                          maxLength: 2000,
+                          controller: _controller,
+                          autocorrect: false,
+                          style: theme.primaryTextTheme.bodyMedium!
+                              .copyWith(fontSize: 14),
+                          onChanged: (value) => {
+                            setState(() {
+                              _currentMessage = value;
+                            })
+                          },
+                          onEditingComplete: () =>
+                              FocusScope.of(context).unfocus(),
+                          onSubmitted: ((_) => {_send(appstate)}),
+                          // onTapOutside: ((_) =>
+                          //     {FocusScope.of(context).unfocus()}),
+                          decoration: InputDecoration(
+                              counterText: "",
+                              border: const OutlineInputBorder(
+                                  borderRadius:
+                                      BorderRadius.all(Radius.circular(28))),
+                              hintText:
+                                  "Message #${appstate.currentChannel?.name}"),
+                        ),
+                      ),
                     ),
                   ),
                   IconButton(

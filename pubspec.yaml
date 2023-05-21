@@ -41,6 +41,7 @@ dependencies:
   blurrycontainer: ^1.0.2
   web_socket_channel: ^2.4.0
   intl: ^0.18.1
+  logging: ^1.1.1
 
 
 dev_dependencies:

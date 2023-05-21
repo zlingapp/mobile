@@ -81,6 +81,7 @@ class OverlappingPanelsState extends State<OverlappingPanels>
       });
     });
     animationController.forward();
+    widget.appstate?.stationary();
   }
 
   void _onApplyTranslation() {

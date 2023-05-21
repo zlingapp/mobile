@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:zling/overlapping_panels.dart';
 import 'package:zling/api.dart';
@@ -5,6 +7,7 @@ import 'package:zling/models.dart';
 import 'globals.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'dart:async';
+import 'package:logging/logging.dart';
 
 // Global State to be passed around to different widgets
 class GlobalState extends ChangeNotifier {
@@ -97,11 +100,20 @@ class GlobalState extends ChangeNotifier {
 
   void ensureLoggedIn() async {
     loggedIn = (await ApiService().ensureLoggedIn(this));
+    if (loggedIn == true) {
+      initStream();
+    }
     notifyListeners();
   }
 
   void logOut() {
     loggedIn = false;
+    notifyListeners();
+  }
+
+  bool socketConnectingFromBroken = false;
+  void reconnectingFromBroken() {
+    socketConnectingFromBroken = true;
     notifyListeners();
   }
 
@@ -113,19 +125,29 @@ class GlobalState extends ChangeNotifier {
     }
     socketReconnecting = false;
     ws = await ApiService().wsConnect(this);
+    if (ws == null) {
+      _logger.info(
+          "Socket initialisation request returned not successful, retrying");
+      socketReconnecting = true;
+      initStream();
+      return;
+    }
     ws!.stream.listen(handleEvent, onDone: () {
+      _logger.info("Socket closed, attempting reconnect");
       socketReconnecting = true;
       initStream();
     });
     ws!.sink.add("heartbeat");
+    notifyListeners();
     return;
   }
 
   void handleEvent(dynamic response) {
-    var event = eventResponseFromJson(response.toString());
-    if (event.topic.type == "channel") {
+    var msg = jsonDecode(response);
+    if (msg["topic"]["type"] == "channel") {
+      var event = eventResponseFromJson(response.toString());
       if (currentChannel == null || event.topic.id != currentChannel!.id) {
-        // Log useless subscription
+        _logger.info("Useless message subscription recorded");
         return;
       }
       messages ??= [];
@@ -135,7 +157,7 @@ class GlobalState extends ChangeNotifier {
           createdAt: event.event.createdAt,
           id: event.event.id));
       notifyListeners();
-    } else if (event.topic.type == "guild") {
+    } else if (msg["topic"]["type"] == "guild") {
       // NOT IMPLEMENTED
     } else {
       //Log uncaught type
@@ -160,15 +182,28 @@ class GlobalState extends ChangeNotifier {
     return true;
   }
 
+  bool socketBrokenNotified = false;
+  final _logger = Logger("GlobalState");
   GlobalState() {
     prevChannelSelection = {};
     ensureLoggedIn();
     getGuilds();
-    timer = Timer.periodic(
-        const Duration(seconds: 5),
-        (Timer t) => {
-              if (ws != null) {ws!.sink.add("heartbeat")}
-            });
+    timer = Timer.periodic(const Duration(seconds: 5), (Timer t) {
+      if (ws != null) {
+        if (socketBrokenNotified) {
+          socketBrokenNotified = false;
+        }
+        ws!.sink.add("heartbeat");
+      } else {
+        if (!socketBrokenNotified &&
+            !socketConnectingFromBroken &&
+            !socketReconnecting) {
+          _logger.info("Socket heartbeat failed, notifying listeners");
+          socketBrokenNotified = true;
+          notifyListeners();
+        }
+      }
+    });
   }
 
   @override
