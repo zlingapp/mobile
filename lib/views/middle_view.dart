@@ -6,6 +6,7 @@ import '../models.dart';
 import '../api.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
+import '../typing_indicator.dart';
 
 class MessagesView extends StatelessWidget {
   const MessagesView({Key? key}) : super(key: key);
@@ -259,6 +260,7 @@ class MessageSendDialog extends StatefulWidget {
 class _MessageSendDialogState extends State<MessageSendDialog> {
   String _currentMessage = "";
   final _controller = TextEditingController();
+  DateTime? lastTyped;
 
   void _send(GlobalState appstate) {
     if (_currentMessage.trim() == "") {
@@ -313,10 +315,16 @@ class _MessageSendDialogState extends State<MessageSendDialog> {
                           autocorrect: false,
                           style: theme.primaryTextTheme.bodyMedium!
                               .copyWith(fontSize: 14),
-                          onChanged: (value) => {
+                          onChanged: (value) {
                             setState(() {
+                              if (lastTyped == null ||
+                                  lastTyped!.isBefore(DateTime.now())) {
+                                lastTyped = DateTime.now()
+                                    .add(const Duration(seconds: 4));
+                                appstate.sendTyping();
+                              }
                               _currentMessage = value;
-                            })
+                            });
                           },
                           onEditingComplete: () =>
                               FocusScope.of(context).unfocus(),
@@ -344,11 +352,37 @@ class _MessageSendDialogState extends State<MessageSendDialog> {
                       icon: const Icon(Icons.emoji_emotions, size: 24)),
                 ],
               ),
+              appstate.typing.isEmpty
+                  ? const SizedBox(height: 20)
+                  : Padding(
+                      padding: const EdgeInsets.only(left: 60),
+                      child: SizedBox(
+                          height: 20,
+                          child: Row(
+                            children: [
+                              const TypingIndicator(),
+                              Text(typingText(appstate.typing.keys.toList()),
+                                  overflow: TextOverflow.fade)
+                            ],
+                          )),
+                    )
             ],
           ),
         ),
       ),
     );
+  }
+}
+
+String typingText(List<Member> users) {
+  if (users.length == 1) {
+    return "${users[0].nickname ?? users[0].name} is typing";
+  } else if (users.length == 2) {
+    return "${users[0].nickname ?? users[0].name} and ${users[1].nickname ?? users[1].name} are typing";
+  } else if (users.length < 5) {
+    return "${users[0].nickname ?? users[0].name}, ${users[1].nickname ?? users[1].name}, and ${users.length - 2} more are typing";
+  } else {
+    return "${users.length} people are tying";
   }
 }
 

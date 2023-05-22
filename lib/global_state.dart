@@ -16,33 +16,72 @@ class GlobalState extends ChangeNotifier {
   // Selected guild from the left sidebar
   Guild? currentGuild;
 
-  void setGuild(Guild guild) {
-    if (ws != null) {
-      if (currentGuild == null) {
-        ws!.sink.add('{"sub":["guild:${guild.id}"]}');
-      } else {
-        ws!.sink.add(
-            '{"sub":["guild:${guild.id}"],"unsub":["guild:${currentGuild!.id}"]}');
-      }
+  void subUnsub({dynamic sub, dynamic unsub}) {
+    if (ws == null) {
+      return;
     }
+    if (sub is Guild && unsub == null) {
+      ws!.sink.add(json.encode({
+        "sub": ["guild:${sub.id}"]
+      }));
+      return;
+    }
+    if (sub is Guild && unsub is Guild) {
+      ws!.sink.add(json.encode({
+        "sub": ["guild:${sub.id}"],
+        "unsub": ["guild:${unsub.id}"]
+      }));
+      return;
+    }
+    if (sub == null && unsub is Guild) {
+      ws!.sink.add(json.encode({
+        "unsub": ["guild:${unsub.id}"]
+      }));
+      return;
+    }
+
+    if (sub is Channel && unsub == null) {
+      ws!.sink.add(json.encode({
+        "sub": ["channel:${sub.id}"]
+      }));
+      return;
+    }
+    if (sub is Channel && unsub is Channel) {
+      ws!.sink.add(json.encode({
+        "sub": ["channel:${sub.id}"],
+        "unsub": ["channel:${unsub.id}"]
+      }));
+      return;
+    }
+    if (sub == null && unsub is Channel) {
+      ws!.sink.add(json.encode({
+        "unsub": ["channel:${unsub.id}"]
+      }));
+      return;
+    }
+    _logger.warning(
+        "Uncaught subscription type-${sub.runtimeType}-${unsub.runtimeType}");
+  }
+
+  void setGuild(Guild guild) async {
+    var oldCurrentGuild = currentGuild;
     currentGuild = guild;
     notifyListeners();
+    if (ws == null) {
+      await wsFirstInit.future;
+    }
+    subUnsub(sub: guild, unsub: oldCurrentGuild);
   }
 
   Channel? currentChannel;
-  void setChannel(Channel? channel) {
-    if (ws != null && channel != null) {
-      if (currentChannel == null) {
-        ws!.sink.add('{"sub":["channel:${channel.id}"]}');
-      } else {
-        ws!.sink.add(
-            '{"sub":["channel:${channel.id}"],"unsub":["channel:${currentChannel!.id}"]}');
-      }
-    } else if (ws != null && currentChannel != null) {
-      ws!.sink.add('{"unsub":["channel:${currentChannel!.id}"]}');
-    }
+  void setChannel(Channel? channel) async {
+    var oldCurrentChannel = currentChannel;
     currentChannel = channel;
     notifyListeners();
+    if (ws == null) {
+      await wsFirstInit.future;
+    }
+    subUnsub(sub: channel, unsub: oldCurrentChannel);
   }
 
   bool inMove = false;
@@ -102,6 +141,7 @@ class GlobalState extends ChangeNotifier {
     loggedIn = (await ApiService().ensureLoggedIn(this));
     if (loggedIn == true) {
       initStream();
+      getGuilds();
     }
     notifyListeners();
   }
@@ -119,6 +159,7 @@ class GlobalState extends ChangeNotifier {
 
   WebSocketChannel? ws;
   bool socketReconnecting = false;
+  Completer wsFirstInit = Completer();
   void initStream() async {
     if (socketReconnecting = true) {
       await Future.delayed(const Duration(seconds: 5));
@@ -134,34 +175,63 @@ class GlobalState extends ChangeNotifier {
     }
     ws!.stream.listen(handleEvent, onDone: () {
       _logger.info("Socket closed, attempting reconnect");
+      wsFirstInit = Completer();
       socketReconnecting = true;
       initStream();
     });
     ws!.sink.add("heartbeat");
     notifyListeners();
+    wsFirstInit.complete();
     return;
   }
 
   void handleEvent(dynamic response) {
     var msg = jsonDecode(response);
-    if (msg["topic"]["type"] == "channel") {
-      var event = eventResponseFromJson(response.toString());
+    if (msg["event"]["type"] == "message") {
+      var event = messageEventResponseFromJson(response);
       if (currentChannel == null || event.topic.id != currentChannel!.id) {
-        _logger.info("Useless message subscription recorded");
+        _logger.info("Useless guild subscription detected (message)");
         return;
       }
       messages ??= [];
       messages!.add(Message(
-          author: event.event.author,
-          content: event.event.content,
-          createdAt: event.event.createdAt,
-          id: event.event.id));
+          author: event.messageEvent.author,
+          content: event.messageEvent.content,
+          createdAt: event.messageEvent.createdAt,
+          id: event.messageEvent.id));
       notifyListeners();
-    } else if (msg["topic"]["type"] == "guild") {
-      // NOT IMPLEMENTED
+    } else if (msg["event"]["type"] == "channel_list_update") {
+      getChannels();
+    } else if (msg["event"]["type"] == "typing") {
+      var event = typingEventResponseFromJson(response);
+      if (currentChannel == null || event.topic.id != currentChannel!.id) {
+        _logger.info("Useless guild subscription detected (typing)");
+      }
+      var user = event.typingEvent.user;
+      if (user.id == Globals.localUser?.id) {
+        return;
+      }
+      if (typing.containsKey(user)) {
+        typing[event.typingEvent.user]?.cancel();
+      }
+      typing[user] = typingTimer(event.typingEvent.user);
+      notifyListeners();
     } else {
       //Log uncaught type
+      _logger.info("Uncaught websocket event of type ${msg['event']['type']}");
     }
+  }
+
+  final Map<Member, Timer> typing = {};
+  Timer typingTimer(Member user) {
+    return timer = Timer(const Duration(seconds: 5), () {
+      typing.remove(user);
+      notifyListeners();
+    });
+  }
+
+  void sendTyping() async {
+    ApiService().sendTyping(this);
   }
 
   final msgScrollController = ScrollController();
@@ -175,9 +245,9 @@ class GlobalState extends ChangeNotifier {
     }
     Globals.localUser = res;
     loggedIn = true;
-    initStream();
     getGuilds();
     getChannels();
+    initStream();
     notifyListeners();
     return true;
   }
@@ -187,9 +257,8 @@ class GlobalState extends ChangeNotifier {
   GlobalState() {
     prevChannelSelection = {};
     ensureLoggedIn();
-    getGuilds();
     timer = Timer.periodic(const Duration(seconds: 5), (Timer t) {
-      if (ws != null) {
+      if (ws != null && loggedIn == true) {
         if (socketBrokenNotified) {
           socketBrokenNotified = false;
         }
@@ -210,6 +279,9 @@ class GlobalState extends ChangeNotifier {
   void dispose() {
     timer?.cancel();
     ws?.sink.close();
+    for (Timer t in typing.values) {
+      t.cancel();
+    }
     super.dispose();
   }
 }

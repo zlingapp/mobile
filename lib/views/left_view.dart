@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:zling/models.dart';
 import 'package:zling/overlapping_panels.dart';
 import '../global_state.dart';
 
@@ -124,9 +123,12 @@ class ChannelsView extends StatelessWidget {
                                           horizontal: 0, vertical: -4),
                                       title: Text(channel.name),
                                       onTap: () {
-                                        appstate.setChannel(channel);
-                                        appstate.prevChannelSelection[
-                                            appstate.currentGuild!] = channel;
+                                        if (channel !=
+                                            appstate.currentChannel) {
+                                          appstate.setChannel(channel);
+                                          appstate.prevChannelSelection[
+                                              appstate.currentGuild!] = channel;
+                                        }
                                         // appstate.prevChannelSelection![appstate
                                         // .channels!
                                         // .indexOf(channel)] =
@@ -197,54 +199,92 @@ class GuildScrollBar extends StatelessWidget {
     return Container(
       color: theme.colorScheme.background,
       child: SafeArea(
-        child: appstate.guilds == null || appstate.guilds!.isEmpty
-            ? const Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: ConstrainedBox(
+          child: appstate.guilds == null || appstate.guilds!.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : ConstrainedBox(
                   constraints: BoxConstraints(
-                      minHeight: MediaQuery.of(context).size.height),
+                      minHeight: MediaQuery.of(context).size.height,
+                      maxWidth: 52),
                   child: IntrinsicHeight(
-                    // TODO Replace this with a listview for more fluency - remove guildIndex
-                    child: NavigationRail(
-                        extended: false,
-                        selectedIndex: 0, //lol, lmao
-                        destinations: [
-                          ...appstate.guilds!.asMap().entries.map((entry) {
-                            Guild x = entry.value;
-                            return NavigationRailDestination(
-                              label: Text(x.name),
-                              icon: GuildIcon(
-                                  iconURL: "https://placeholder.com/32",
-                                  selected: (x == appstate.currentGuild)),
-                            );
-                          }).toList(),
-                          const NavigationRailDestination(
-                              label: Text("sus"), icon: Icon(Icons.add))
-                        ],
-                        onDestinationSelected: (value) {
-                          if (appstate.guilds == null ||
-                              value >= appstate.guilds!.length) {
-                            return;
-                          }
-                          appstate.setGuild(appstate.guilds![value]);
-                          appstate.getChannels();
-                          if (appstate.prevChannelSelection
-                              .containsKey(appstate.guilds![value])) {
-                            appstate.setChannel(appstate.prevChannelSelection[
-                                appstate.guilds![value]]!);
-                          } else {
-                            appstate.setChannel(null);
-                          }
-                          appstate.getMessages();
-                          // appstate.setChannelIndex(
-                          // appstate.prevChannelSelection![value]);
-                        }),
-                  ),
-                ),
-              ),
-      ),
+                    child: ListView(
+                      scrollDirection: Axis.vertical,
+                      shrinkWrap: true,
+                      children: [
+                        ...(appstate.guilds == null
+                            ? const [CircularProgressIndicator()]
+                            : appstate.guilds!.map(
+                                (e) {
+                                  return GestureDetector(
+                                      onTap: () {
+                                        if (e == appstate.currentGuild) return;
+                                        if (appstate.guilds == null ||
+                                            appstate.guilds!.isEmpty) return;
+                                        appstate.setGuild(e);
+                                        if (appstate.prevChannelSelection
+                                            .containsKey(e)) {
+                                          appstate.setChannel(
+                                              appstate.prevChannelSelection[e]);
+                                        } else if (appstate.currentChannel !=
+                                            null) {
+                                          appstate.setChannel(null);
+                                        }
+                                        appstate.getChannels();
+                                        appstate.getMessages();
+                                      },
+                                      child: GuildIcon(
+                                        iconURL:
+                                            "https://via.placeholder.com/32",
+                                        selected: e == appstate.currentGuild,
+                                      ));
+                                },
+                              ).toList())
+                      ],
+                    ),
+                  ))),
     );
+    // SingleChildScrollView(
+    //     physics: const BouncingScrollPhysics(),
+    //     child: ConstrainedBox(
+    //       constraints: BoxConstraints(
+    //           minHeight: MediaQuery.of(context).size.height),
+    //       child: IntrinsicHeight(
+    //         child: NavigationRail(
+    //             extended: false,
+    //             selectedIndex: 0, //lol, lmao
+    //             destinations: [
+    //               ...appstate.guilds!.asMap().entries.map((entry) {
+    //                 Guild x = entry.value;
+    //                 return NavigationRailDestination(
+    //                   label: Text(x.name),
+    //                   icon: GuildIcon(
+    //                       iconURL: "https://placeholder.com/32",
+    //                       selected: (x == appstate.currentGuild)),
+    //                 );
+    //               }).toList(),
+    //               const NavigationRailDestination(
+    //                   label: Text("sus"), icon: Icon(Icons.add))
+    //             ],
+    //             onDestinationSelected: (value) {
+    //               if (appstate.guilds == null ||
+    //                   value >= appstate.guilds!.length) {
+    //                 return;
+    //               }
+    //               appstate.setGuild(appstate.guilds![value]);
+    //               appstate.getChannels();
+    //               if (appstate.prevChannelSelection
+    //                   .containsKey(appstate.guilds![value])) {
+    //                 appstate.setChannel(appstate.prevChannelSelection[
+    //                     appstate.guilds![value]]!);
+    //               } else {
+    //                 appstate.setChannel(null);
+    //               }
+    //               appstate.getMessages();
+    //               // appstate.setChannelIndex(
+    //               // appstate.prevChannelSelection![value]);
+    //             }),
+    //       ),
+    //     ),
+    //   ),
   }
 }
 

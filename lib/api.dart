@@ -144,7 +144,7 @@ class ApiService {
           return null;
         }
         loggingIn = true;
-        _logger.info("Requesting reissue");
+        _logger.info("Requesting reissue for $endpoint");
         var res = await http.post(Uri.parse(reissueEndpoint),
             headers: {"Content-Type": "application/json"},
             body: '{"refreshToken": "${tokens.refreshToken}"}');
@@ -279,6 +279,16 @@ class ApiService {
       log(e.toString());
     }
     return null;
+  }
+
+  void sendTyping(GlobalState state) async {
+    if (state.currentChannel == null || state.currentGuild == null) {
+      return;
+    }
+    authFetch(
+        HttpMethod.post,
+        typingEndpoint(state.currentGuild!.id, state.currentChannel!.id),
+        state);
   }
 
   Future<WebSocketChannel?> wsConnect(GlobalState state) async {

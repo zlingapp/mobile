@@ -23,6 +23,9 @@ const String reissueEndpoint = "$baseURL/auth/reissue";
 const String whoamiEndpoint = "$baseURL/auth/whoami";
 const String logInEndpoint = "$baseURL/auth/login";
 
+Function typingEndpoint =
+    (String gid, String cid) => "$baseURL/guilds/$gid/channels/$cid/typing";
+
 Function wsEndpoint =
     (accessToken) => "ws://$hostURL/api/events/ws/?auth=$accessToken";
 

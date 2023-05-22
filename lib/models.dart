@@ -80,7 +80,7 @@ String messageToJson(List<Message> data) =>
     json.encode(List<dynamic>.from(data.map((x) => x.toJson())));
 
 class Message {
-  Author author;
+  Member author;
   String content;
   DateTime createdAt;
   String id;
@@ -101,7 +101,7 @@ class Message {
   int get hashCode => Object.hash(id, "");
 
   factory Message.fromJson(Map<String, dynamic> json) => Message(
-        author: Author.fromJson(json["author"]),
+        author: Member.fromJson(json["author"]),
         content: json["content"],
         createdAt: DateTime.parse(json["created_at"] + "Z"),
         id: json["id"],
@@ -112,49 +112,6 @@ class Message {
         "content": content,
         "created_at": createdAt.toIso8601String(),
         "id": id,
-      };
-}
-
-class Author {
-  String avatar;
-  String id;
-  String? nickname;
-  String username;
-  late String discriminant;
-  late String name;
-  // String get discriminant => username.split("#")[1];
-  // String
-
-  Author({
-    required this.avatar,
-    required this.id,
-    this.nickname,
-    required this.username,
-  }) {
-    discriminant = username.split("#")[1];
-    name = username.split("#")[0];
-  }
-
-  @override
-  bool operator ==(Object other) {
-    return other is Author && other.id == id;
-  }
-
-  @override
-  int get hashCode => Object.hash(id, "");
-
-  factory Author.fromJson(Map<String, dynamic> json) => Author(
-        avatar: json["avatar"],
-        id: json["id"],
-        nickname: json["nickname"],
-        username: json["username"],
-      );
-
-  Map<String, dynamic> toJson() => {
-        "avatar": avatar,
-        "id": id,
-        "nickname": nickname,
-        "username": username,
       };
 }
 
@@ -227,39 +184,41 @@ class LoginResponse {
       };
 }
 
-EventResponse eventResponseFromJson(String str) =>
-    EventResponse.fromJson(json.decode(str));
+MessageEventResponse messageEventResponseFromJson(String str) =>
+    MessageEventResponse.fromJson(json.decode(str));
 
-String eventResponseToJson(EventResponse data) => json.encode(data.toJson());
+String messageEventResponseToJson(MessageEventResponse data) =>
+    json.encode(data.toJson());
 
-class EventResponse {
-  Event event;
+class MessageEventResponse {
+  MessageEvent messageEvent;
   Topic topic;
 
-  EventResponse({
-    required this.event,
+  MessageEventResponse({
+    required this.messageEvent,
     required this.topic,
   });
 
-  factory EventResponse.fromJson(Map<String, dynamic> json) => EventResponse(
-        event: Event.fromJson(json["event"]),
+  factory MessageEventResponse.fromJson(Map<String, dynamic> json) =>
+      MessageEventResponse(
+        messageEvent: MessageEvent.fromJson(json["event"]),
         topic: Topic.fromJson(json["topic"]),
       );
 
   Map<String, dynamic> toJson() => {
-        "event": event.toJson(),
+        "event": messageEvent.toJson(),
         "topic": topic.toJson(),
       };
 }
 
-class Event {
-  Author author;
+class MessageEvent {
+  Member author;
   String content;
   DateTime createdAt;
   String id;
   String type;
 
-  Event({
+  MessageEvent({
     required this.author,
     required this.content,
     required this.createdAt,
@@ -267,10 +226,10 @@ class Event {
     required this.type,
   });
 
-  factory Event.fromJson(Map<String, dynamic> json) => Event(
-        author: Author.fromJson(json["author"]),
+  factory MessageEvent.fromJson(Map<String, dynamic> json) => MessageEvent(
+        author: Member.fromJson(json["author"]),
         content: json["content"],
-        createdAt: DateTime.parse(json["created_at"] + "Z"),
+        createdAt: DateTime.parse(json["created_at"]),
         id: json["id"],
         type: json["type"],
       );
@@ -281,6 +240,47 @@ class Event {
         "created_at": createdAt.toIso8601String(),
         "id": id,
         "type": type,
+      };
+}
+
+class Member {
+  String avatar;
+  String id;
+  String? nickname;
+  String username;
+  late String discriminant;
+  late String name;
+
+  Member({
+    required this.avatar,
+    required this.id,
+    this.nickname,
+    required this.username,
+  }) {
+    discriminant = username.split("#")[1];
+    name = username.split("#")[0];
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is Member && other.id == id;
+  }
+
+  @override
+  int get hashCode => Object.hash(id, "");
+
+  factory Member.fromJson(Map<String, dynamic> json) => Member(
+        avatar: json["avatar"],
+        id: json["id"],
+        nickname: json["nickname"],
+        username: json["username"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "avatar": avatar,
+        "id": id,
+        "nickname": nickname,
+        "username": username,
       };
 }
 
@@ -301,5 +301,52 @@ class Topic {
   Map<String, dynamic> toJson() => {
         "id": id,
         "type": type,
+      };
+}
+
+TypingEventResponse typingEventResponseFromJson(String str) =>
+    TypingEventResponse.fromJson(json.decode(str));
+
+String typingEventResponseToJson(TypingEventResponse data) =>
+    json.encode(data.toJson());
+
+class TypingEventResponse {
+  TypingEvent typingEvent;
+  Topic topic;
+
+  TypingEventResponse({
+    required this.typingEvent,
+    required this.topic,
+  });
+
+  factory TypingEventResponse.fromJson(Map<String, dynamic> json) =>
+      TypingEventResponse(
+        typingEvent: TypingEvent.fromJson(json["event"]),
+        topic: Topic.fromJson(json["topic"]),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "event": typingEvent.toJson(),
+        "topic": topic.toJson(),
+      };
+}
+
+class TypingEvent {
+  String type;
+  Member user;
+
+  TypingEvent({
+    required this.type,
+    required this.user,
+  });
+
+  factory TypingEvent.fromJson(Map<String, dynamic> json) => TypingEvent(
+        type: json["type"],
+        user: Member.fromJson(json["user"]),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "type": type,
+        "user": user.toJson(),
       };
 }
