@@ -137,16 +137,25 @@ class GlobalState extends ChangeNotifier {
   }
 
   List<Message>? messages = [];
-  Future<void> getMessages({int limit = 50}) async {
+  bool moreMessagesToLoad = false;
+  Future<void> getMessages({int limit = 50, DateTime? before}) async {
     if (currentGuild == null || currentChannel == null) {
       messages = [];
+      moreMessagesToLoad = false;
       notifyListeners();
       return;
     }
-    messages = (await ApiService()
-        .getMessages(currentGuild!.id, currentChannel!.id, limit, this));
-    if (messages != null) {
-      messages = messages?.where((e) => e.content.trim() != "").toList();
+    List<Message>? m;
+    bool b;
+    (m, b) = (await ApiService().getMessages(
+        currentGuild!.id, currentChannel!.id, limit, this,
+        before: before));
+    moreMessagesToLoad = b;
+    if (m != null) {
+      m = m.where((e) => e.content.trim() != "").toList();
+      messages = (before == null && messages != null) ? m : m + messages!;
+    } else {
+      messages = null;
     }
     notifyListeners();
   }

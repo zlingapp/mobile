@@ -33,8 +33,10 @@ Function wsEndpoint =
 
 Function channelsEndpoint = (String id) => "$baseURL/guilds/$id/channels";
 
-Function messagesEndpoint = (String gid, String cid, int limit) =>
-    "$baseURL/guilds/$gid/channels/$cid/messages?limit=$limit";
+Function messagesEndpoint =
+    (String gid, String cid, int limit, DateTime? before) => (before == null)
+        ? "$baseURL/guilds/$gid/channels/$cid/messages?limit=$limit"
+        : "$baseURL/guilds/$gid/channels/$cid/messages?limit=$limit&before=${before.toUtc().toIso8601String()}";
 
 Function sendMessageEndpoint =
     (String gid, String cid) => "$baseURL/guilds/$gid/channels/$cid/messages";

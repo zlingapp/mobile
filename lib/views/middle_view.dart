@@ -120,8 +120,32 @@ class MessagesView extends StatelessWidget {
   }
 }
 
-class MessageList extends StatelessWidget {
+class MessageList extends StatefulWidget {
   const MessageList({super.key});
+
+  @override
+  State<MessageList> createState() => _MessageListState();
+}
+
+class _MessageListState extends State<MessageList> {
+  final _controller = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
+      GlobalState appstate = Provider.of(context, listen: false);
+      _controller.addListener(() {
+        if (_controller.position.atEdge &&
+            _controller.position.pixels != 0 &&
+            appstate.moreMessagesToLoad == true &&
+            appstate.messages != null &&
+            appstate.messages!.isNotEmpty) {
+          appstate.getMessages(before: appstate.messages![0].createdAt);
+        }
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -157,6 +181,7 @@ class MessageList extends StatelessWidget {
 
     return Expanded(
       child: ListView(
+        controller: _controller,
         reverse: true,
         shrinkWrap: true,
         scrollDirection: Axis.vertical,

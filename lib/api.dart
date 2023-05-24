@@ -253,32 +253,37 @@ class ApiService {
     return null;
   }
 
-  Future<List<Message>?> getMessages(
-      String gid, String cid, int limit, GlobalState state) async {
+  Future<(List<Message>?, bool)> getMessages(
+      String gid, String cid, int limit, GlobalState state,
+      {DateTime? before}) async {
     if (limit > 50) {
       limit = 50;
     }
     try {
       var response = await authFetch(
-          HttpMethod.get, messagesEndpoint(gid, cid, limit), state);
+          HttpMethod.get, messagesEndpoint(gid, cid, limit, before), state);
       if (response == null) {
-        return null;
+        return (null, false);
       }
       if (200 <= response.statusCode && response.statusCode < 300) {
         List<Message> messages = messageFromJson(response.body);
         messages.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-        return messages
+        messages = messages
             .map((e) => Message(
                 author: e.author,
                 content: e.content.trim(),
                 createdAt: e.createdAt,
                 id: e.id))
             .toList();
+        if (response.statusCode == 206) {
+          return (messages, true);
+        }
+        return (messages, false);
       }
     } catch (e) {
       log(e.toString());
     }
-    return null;
+    return (null, false);
   }
 
   Future<bool> createGuild(String name, GlobalState state) async {
