@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:zling/overlapping_panels.dart';
 import '../global_state.dart';
+import '../api.dart';
 
 class LeftView extends StatelessWidget {
   const LeftView({super.key});
@@ -208,6 +209,7 @@ class GuildScrollBar extends StatelessWidget {
                       minHeight: MediaQuery.of(context).size.height),
                   child: Column(
                     children: [
+                      const SizedBox(height: 16),
                       ...(appstate.guilds == null
                           ? const [CircularProgressIndicator()]
                           : appstate.guilds!.map(
@@ -223,16 +225,6 @@ class GuildScrollBar extends StatelessWidget {
                                         if (appstate.guilds == null ||
                                             appstate.guilds!.isEmpty) return;
                                         appstate.setGuild(e);
-                                        if (appstate.prevChannelSelection
-                                            .containsKey(e)) {
-                                          appstate.setChannel(
-                                              appstate.prevChannelSelection[e]);
-                                        } else if (appstate.currentChannel !=
-                                            null) {
-                                          appstate.setChannel(null);
-                                        }
-                                        appstate.getChannels();
-                                        appstate.getMessages();
                                       },
                                       child: GuildIcon(
                                         iconURL:
@@ -244,7 +236,12 @@ class GuildScrollBar extends StatelessWidget {
                             ).toList()),
                       IconButton(
                         icon: const Icon(Icons.add),
-                        onPressed: () {},
+                        onPressed: () {
+                          showDialog(
+                              context: context,
+                              builder: (BuildContext context) =>
+                                  const CreateOrJoinGuildDialog());
+                        },
                       )
                     ],
                   ),
@@ -252,49 +249,6 @@ class GuildScrollBar extends StatelessWidget {
               ),
       ),
     );
-    // SingleChildScrollView(
-    //     physics: const BouncingScrollPhysics(),
-    //     child: ConstrainedBox(
-    //       constraints: BoxConstraints(
-    //           minHeight: MediaQuery.of(context).size.height),
-    //       child: IntrinsicHeight(
-    //         child: NavigationRail(
-    //             extended: false,
-    //             selectedIndex: 0, //lol, lmao
-    //             destinations: [
-    //               ...appstate.guilds!.asMap().entries.map((entry) {
-    //                 Guild x = entry.value;
-    //                 return NavigationRailDestination(
-    //                   label: Text(x.name),
-    //                   icon: GuildIcon(
-    //                       iconURL: "https://placeholder.com/32",
-    //                       selected: (x == appstate.currentGuild)),
-    //                 );
-    //               }).toList(),
-    //               const NavigationRailDestination(
-    //                   label: Text("sus"), icon: Icon(Icons.add))
-    //             ],
-    //             onDestinationSelected: (value) {
-    //               if (appstate.guilds == null ||
-    //                   value >= appstate.guilds!.length) {
-    //                 return;
-    //               }
-    //               appstate.setGuild(appstate.guilds![value]);
-    //               appstate.getChannels();
-    //               if (appstate.prevChannelSelection
-    //                   .containsKey(appstate.guilds![value])) {
-    //                 appstate.setChannel(appstate.prevChannelSelection[
-    //                     appstate.guilds![value]]!);
-    //               } else {
-    //                 appstate.setChannel(null);
-    //               }
-    //               appstate.getMessages();
-    //               // appstate.setChannelIndex(
-    //               // appstate.prevChannelSelection![value]);
-    //             }),
-    //       ),
-    //     ),
-    //   ),
   }
 }
 
@@ -312,6 +266,279 @@ class GuildIcon extends StatelessWidget {
         size: const Size.fromRadius(28), // Image radius
         child: Image.network(iconURL, fit: BoxFit.cover),
       ),
+    );
+  }
+}
+
+class CreateOrJoinGuildDialog extends StatelessWidget {
+  const CreateOrJoinGuildDialog({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var regStyle = theme.textTheme.bodyMedium;
+    var emphStyle = theme.textTheme.bodyMedium!.copyWith(
+        fontWeight: FontWeight.bold, color: theme.colorScheme.primary);
+    return SimpleDialog(
+        contentPadding: const EdgeInsets.all(20),
+        title: Container(
+            padding: const EdgeInsets.only(bottom: 8),
+            width: MediaQuery.of(context).size.width,
+            decoration: BoxDecoration(
+                border: Border(
+                    bottom: BorderSide(color: theme.colorScheme.outline))),
+            child: const Center(child: Text("Create Server?"))),
+        children: [
+          RichText(
+              text: TextSpan(
+                  text: "Do you want to ",
+                  style: regStyle,
+                  children: [
+                TextSpan(text: "create a server?", style: emphStyle)
+              ])),
+          const SizedBox(height: 6),
+          RichText(
+              text: TextSpan(text: "Servers", style: emphStyle, children: [
+            TextSpan(
+                style: regStyle,
+                text:
+                    " are invite-only communities where you can chat in channels, organize roles, and manage a list of members.")
+          ])),
+          const SizedBox(height: 6),
+          RichText(
+              text: TextSpan(
+                  text:
+                      "Alternatively, you can join someone else's server as a member instead.",
+                  style: regStyle)),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(context);
+                    showDialog(
+                        context: context,
+                        builder: (BuildContext context) =>
+                            const CreateServerDialog());
+                  },
+                  style: ButtonStyle(
+                      backgroundColor: MaterialStateProperty.all(
+                          theme.colorScheme.primaryContainer)),
+                  child: Text("Create Server",
+                      style: theme.textTheme.labelLarge!.copyWith(
+                          color: theme.colorScheme.onPrimaryContainer))),
+              const SizedBox(width: 12),
+              ElevatedButton(
+                  style: ButtonStyle(
+                      backgroundColor: MaterialStateProperty.all(
+                          theme.colorScheme.background)),
+                  onPressed: () {
+                    Navigator.of(context).pop(context);
+                    showDialog(
+                        context: context,
+                        builder: (BuildContext context) =>
+                            const JoinServerDialog());
+                  },
+                  child: Text("Join Server",
+                      style: theme.textTheme.labelLarge!
+                          .copyWith(color: theme.colorScheme.onBackground)))
+            ],
+          )
+        ]);
+  }
+}
+
+class JoinServerDialog extends StatefulWidget {
+  const JoinServerDialog({super.key});
+
+  @override
+  State<JoinServerDialog> createState() => _JoinServerDialogState();
+}
+
+class _JoinServerDialogState extends State<JoinServerDialog> {
+  String _currentText = "";
+  bool? _success;
+
+  Future<void> _submit(GlobalState state, {String? text}) async {
+    text ??= _currentText;
+    if (text == "") return;
+    var res = await ApiService().joinGuild(text, state);
+    setState(() {
+      _success = res;
+    });
+    return;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var appstate = context.watch<GlobalState>();
+    return SimpleDialog(contentPadding: const EdgeInsets.all(20), children: [
+      TextField(
+        autocorrect: false,
+        decoration: InputDecoration(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
+            labelText: "Server ID"),
+        onChanged: (value) => setState(() {
+          _currentText = value;
+        }),
+        onSubmitted: (value) => _submit(appstate, text: value).then((_) {
+          if (_success == true) Navigator.of(context).pop(context);
+        }),
+      ),
+      const SizedBox(height: 22),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          ElevatedButton(
+              onPressed: () => _submit(appstate).then((_) {
+                    if (_success == true) Navigator.of(context).pop(context);
+                  }),
+              style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.all(
+                      theme.colorScheme.primaryContainer)),
+              child: Text("Join",
+                  style: theme.textTheme.labelLarge!
+                      .copyWith(color: theme.colorScheme.onPrimaryContainer))),
+          const SizedBox(width: 12),
+          ElevatedButton(
+              style: ButtonStyle(
+                  backgroundColor:
+                      MaterialStateProperty.all(theme.colorScheme.background)),
+              onPressed: () {
+                Navigator.of(context).pop(context);
+              },
+              child: Text("Cancel",
+                  style: theme.textTheme.labelLarge!
+                      .copyWith(color: theme.colorScheme.onBackground)))
+        ],
+      ),
+      if (_success == false)
+        Center(
+            child: Text("Joining server failed. Check the ID and try again.",
+                style: theme.textTheme.labelMedium!
+                    .copyWith(color: theme.colorScheme.error)))
+    ]);
+  }
+}
+
+class CreateServerDialog extends StatefulWidget {
+  const CreateServerDialog({super.key});
+
+  @override
+  State<CreateServerDialog> createState() => _CreateServerDialogState();
+}
+
+class _CreateServerDialogState extends State<CreateServerDialog> {
+  String _currentText = "";
+  bool? _success;
+
+  Future<void> _submit(GlobalState state, {String? text}) async {
+    text ??= _currentText;
+    var res = await ApiService().createGuild(text, state);
+    setState(() {
+      _success = res;
+    });
+    return;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var appstate = context.watch<GlobalState>();
+    return SimpleDialog(
+      contentPadding: const EdgeInsets.all(20),
+      title: Container(
+          padding: const EdgeInsets.only(bottom: 8),
+          width: MediaQuery.of(context).size.width,
+          decoration: BoxDecoration(
+              border:
+                  Border(bottom: BorderSide(color: theme.colorScheme.outline))),
+          child: const Center(child: Text("Create Your Server"))),
+      children: [
+        Text("SERVER ICON", style: theme.textTheme.labelSmall),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(48), // Image border
+              child: SizedBox.fromSize(
+                size: const Size.fromRadius(36), // Image radius
+                child: Image.network("https://via.placeholder.com/32",
+                    fit: BoxFit.cover),
+              ),
+            ),
+            const SizedBox(width: 24),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                    onPressed: () {},
+                    child: Text("Browse", style: theme.textTheme.bodyLarge)),
+                const SizedBox(height: 4),
+                const Text("Maximum 25MB"),
+                const Text("At least 64x64")
+              ],
+            )
+          ],
+        ),
+        const SizedBox(height: 24),
+        TextField(
+          autocorrect: false,
+          decoration: InputDecoration(
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
+              labelText: "Server Name"),
+          onChanged: (value) => setState(() {
+            _currentText = value;
+          }),
+          onSubmitted: (value) => _submit(appstate, text: value).then((_) {
+            if (_success == true) {
+              Navigator.of(context).pop(context);
+            }
+          }),
+        ),
+        const SizedBox(height: 22),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton(
+                onPressed: () {
+                  _submit(appstate).then((_) {
+                    if (_success == true) {
+                      Navigator.of(context).pop(context);
+                    }
+                  });
+                },
+                style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.all(
+                        theme.colorScheme.primaryContainer)),
+                child: Text("Join",
+                    style: theme.textTheme.labelLarge!.copyWith(
+                        color: theme.colorScheme.onPrimaryContainer))),
+            const SizedBox(width: 12),
+            ElevatedButton(
+                style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.all(
+                        theme.colorScheme.background)),
+                onPressed: () {
+                  Navigator.of(context).pop(context);
+                },
+                child: Text("Cancel",
+                    style: theme.textTheme.labelLarge!
+                        .copyWith(color: theme.colorScheme.onBackground)))
+          ],
+        ),
+        if (_success == false)
+          Center(
+              child: Text("Server creation failed. Uh oh",
+                  style: theme.textTheme.labelMedium!
+                      .copyWith(color: theme.colorScheme.error)))
+      ],
     );
   }
 }

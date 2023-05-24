@@ -281,6 +281,32 @@ class ApiService {
     return null;
   }
 
+  Future<bool> createGuild(String name, GlobalState state) async {
+    var response = await authFetch(HttpMethod.post, guildsEndpoint, state,
+        body: jsonEncode({"name": name}));
+    if (response == null ||
+        !(200 <= response.statusCode && response.statusCode < 300)) {
+      return false;
+    }
+    var g = await state.resolveGuild(json.decode(response.body)["guild_id"]);
+    if (g == null) return false;
+    state.setGuild(g);
+    return true;
+  }
+
+  Future<bool> joinGuild(String gid, GlobalState state) async {
+    var response =
+        await authFetch(HttpMethod.get, joinGuildEndpoint(gid), state);
+    if (response == null ||
+        !(200 <= response.statusCode && response.statusCode < 300)) {
+      return false;
+    }
+    var g = await state.resolveGuild(gid);
+    if (g == null) return false;
+    state.setGuild(g);
+    return true;
+  }
+
   void sendTyping(GlobalState state) async {
     if (state.currentChannel == null || state.currentGuild == null) {
       return;

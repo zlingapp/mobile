@@ -66,11 +66,25 @@ class GlobalState extends ChangeNotifier {
   void setGuild(Guild guild) async {
     var oldCurrentGuild = currentGuild;
     currentGuild = guild;
+    if (prevChannelSelection.containsKey(guild)) {
+      setChannel(prevChannelSelection[guild]);
+    } else if (currentChannel != null) {
+      setChannel(null);
+    }
+    getChannels();
+    getMessages();
     notifyListeners();
     if (ws == null) {
       await wsFirstInit.future;
     }
     subUnsub(sub: guild, unsub: oldCurrentGuild);
+  }
+
+  Future<Guild?> resolveGuild(String gid) async {
+    await getGuilds();
+    if (guilds == null) return null;
+    if (guilds!.where((element) => element.id == gid).isEmpty) return null;
+    return guilds!.where((e) => e.id == gid).toList()[0];
   }
 
   Channel? currentChannel;
@@ -104,11 +118,11 @@ class GlobalState extends ChangeNotifier {
 
   List<Guild>? guilds;
   late Map<Guild, Channel> prevChannelSelection;
-  void getGuilds() async {
+  Future<void> getGuilds() async {
     guilds = (await ApiService().getGuilds(this));
     if (guilds == null) {
       notifyListeners();
-      return null;
+      return;
     }
     notifyListeners();
   }
