@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:zling/overlapping_panels.dart';
 import '../global_state.dart';
 import '../api.dart';
+import '../context_menu.dart';
 
 class LeftView extends StatelessWidget {
   const LeftView({super.key});
@@ -115,30 +116,35 @@ class ChannelsView extends StatelessWidget {
                             ? const [Center(child: CircularProgressIndicator())]
                             : appstate.channels!
                                 .where((i) => (i.type == "text"))
-                                .map((channel) => ListTile(
-                                      leading: const Icon(Icons.tag),
-                                      selected:
-                                          (appstate.currentChannel == channel),
-                                      horizontalTitleGap: 0,
-                                      visualDensity: const VisualDensity(
-                                          horizontal: 0, vertical: -4),
-                                      title: Text(channel.name),
-                                      onTap: () {
-                                        if (channel !=
-                                            appstate.currentChannel) {
-                                          appstate.setChannel(channel);
-                                          appstate.prevChannelSelection[
-                                              appstate.currentGuild!] = channel;
-                                        }
-                                        // appstate.prevChannelSelection![appstate
-                                        // .channels!
-                                        // .indexOf(channel)] =
-                                        // appstate.channels!.indexOf(channel);
-                                        appstate.getMessages().then((value) => {
-                                              OverlappingPanels.of(context)
-                                                  ?.setCenter()
-                                            });
-                                      },
+                                .map((channel) => BasicContextMenu(
+                                      id: channel.id,
+                                      child: ListTile(
+                                        leading: const Icon(Icons.tag),
+                                        selected: (appstate.currentChannel ==
+                                            channel),
+                                        horizontalTitleGap: 0,
+                                        visualDensity: const VisualDensity(
+                                            horizontal: 0, vertical: -4),
+                                        title: Text(channel.name),
+                                        onTap: () {
+                                          if (channel !=
+                                              appstate.currentChannel) {
+                                            appstate.setChannel(channel);
+                                            appstate.prevChannelSelection[
+                                                    appstate.currentGuild!] =
+                                                channel;
+                                          }
+                                          // appstate.prevChannelSelection![appstate
+                                          // .channels!
+                                          // .indexOf(channel)] =
+                                          // appstate.channels!.indexOf(channel);
+                                          appstate.getMessages().then((value) =>
+                                              {
+                                                OverlappingPanels.of(context)
+                                                    ?.setCenter()
+                                              });
+                                        },
+                                      ),
                                     ))
                                 .toList()),
                       if (appstate.channels != null &&
@@ -214,23 +220,26 @@ class GuildScrollBar extends StatelessWidget {
                           ? const [CircularProgressIndicator()]
                           : appstate.guilds!.map(
                               (e) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(
-                                      left: 8, right: 8, top: 4, bottom: 4),
-                                  child: GestureDetector(
-                                      onTap: () {
-                                        if (e == appstate.currentGuild) {
-                                          return;
-                                        }
-                                        if (appstate.guilds == null ||
-                                            appstate.guilds!.isEmpty) return;
-                                        appstate.setGuild(e);
-                                      },
-                                      child: GuildIcon(
-                                        iconURL:
-                                            "https://via.placeholder.com/32",
-                                        selected: e == appstate.currentGuild,
-                                      )),
+                                return BasicContextMenu(
+                                  id: e.id,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(
+                                        left: 8, right: 8, top: 4, bottom: 4),
+                                    child: GestureDetector(
+                                        onTap: () {
+                                          if (e == appstate.currentGuild) {
+                                            return;
+                                          }
+                                          if (appstate.guilds == null ||
+                                              appstate.guilds!.isEmpty) return;
+                                          appstate.setGuild(e);
+                                        },
+                                        child: GuildIcon(
+                                          iconURL:
+                                              "https://via.placeholder.com/32",
+                                          selected: e == appstate.currentGuild,
+                                        )),
+                                  ),
                                 );
                               },
                             ).toList()),
