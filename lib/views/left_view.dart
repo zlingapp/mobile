@@ -199,24 +199,27 @@ class GuildScrollBar extends StatelessWidget {
     return Container(
       color: theme.colorScheme.background,
       child: SafeArea(
-          child: appstate.guilds == null || appstate.guilds!.isEmpty
-              ? const Center(child: CircularProgressIndicator())
-              : ConstrainedBox(
+        child: appstate.guilds == null || appstate.guilds!.isEmpty
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: ConstrainedBox(
                   constraints: BoxConstraints(
-                      minHeight: MediaQuery.of(context).size.height,
-                      maxWidth: 52),
-                  child: IntrinsicHeight(
-                    child: ListView(
-                      scrollDirection: Axis.vertical,
-                      shrinkWrap: true,
-                      children: [
-                        ...(appstate.guilds == null
-                            ? const [CircularProgressIndicator()]
-                            : appstate.guilds!.map(
-                                (e) {
-                                  return GestureDetector(
+                      minHeight: MediaQuery.of(context).size.height),
+                  child: Column(
+                    children: [
+                      ...(appstate.guilds == null
+                          ? const [CircularProgressIndicator()]
+                          : appstate.guilds!.map(
+                              (e) {
+                                return Padding(
+                                  padding: const EdgeInsets.only(
+                                      left: 8, right: 8, top: 4, bottom: 4),
+                                  child: GestureDetector(
                                       onTap: () {
-                                        if (e == appstate.currentGuild) return;
+                                        if (e == appstate.currentGuild) {
+                                          return;
+                                        }
                                         if (appstate.guilds == null ||
                                             appstate.guilds!.isEmpty) return;
                                         appstate.setGuild(e);
@@ -235,12 +238,19 @@ class GuildScrollBar extends StatelessWidget {
                                         iconURL:
                                             "https://via.placeholder.com/32",
                                         selected: e == appstate.currentGuild,
-                                      ));
-                                },
-                              ).toList())
-                      ],
-                    ),
-                  ))),
+                                      )),
+                                );
+                              },
+                            ).toList()),
+                      IconButton(
+                        icon: const Icon(Icons.add),
+                        onPressed: () {},
+                      )
+                    ],
+                  ),
+                ),
+              ),
+      ),
     );
     // SingleChildScrollView(
     //     physics: const BouncingScrollPhysics(),
