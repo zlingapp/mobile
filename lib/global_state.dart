@@ -1,9 +1,9 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:zling/overlapping_panels.dart';
-import 'package:zling/api.dart';
-import 'package:zling/models.dart';
+import 'package:zling/ui-elements/overlapping_panels.dart';
+import 'package:zling/lib/api.dart';
+import 'package:zling/lib/models.dart';
 import 'globals.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'dart:async';

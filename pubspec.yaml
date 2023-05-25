@@ -42,6 +42,7 @@ dependencies:
   web_socket_channel: ^2.4.0
   intl: ^0.18.1
   logging: ^1.1.1
+  mediasoup_client_flutter: ^0.8.1
 
 
 dev_dependencies:

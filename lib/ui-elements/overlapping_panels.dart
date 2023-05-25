@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:core';
-import 'global_state.dart';
+import '../global_state.dart';
 
 /// Display sections
 enum RevealSide { left, right, main }

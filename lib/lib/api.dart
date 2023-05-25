@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:core';
 import 'dart:io';
-import 'package:zling/models.dart';
+import 'package:zling/lib/models.dart';
 import 'dart:developer';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'globals.dart';
-import 'global_state.dart';
+import '../globals.dart';
+import '../global_state.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:logging/logging.dart';
 

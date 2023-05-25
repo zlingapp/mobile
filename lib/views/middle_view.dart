@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:zling/overlapping_panels.dart';
+import 'package:zling/ui-elements/overlapping_panels.dart';
 import 'package:provider/provider.dart';
 import '../global_state.dart';
-import '../models.dart';
-import '../api.dart';
+import '../lib/models.dart';
+import '../lib/api.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
-import '../typing_indicator.dart';
+import '../ui-elements/typing_indicator.dart';
 
 class MessagesView extends StatelessWidget {
   const MessagesView({Key? key}) : super(key: key);

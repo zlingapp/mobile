@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:zling/overlapping_panels.dart';
+import 'package:zling/ui-elements/overlapping_panels.dart';
 import 'package:provider/provider.dart';
 import 'themes.dart';
 import 'views/login_view.dart';
-import 'api.dart';
+import 'lib/api.dart';
 import 'views/left_view.dart';
 import 'global_state.dart';
 import 'globals.dart';

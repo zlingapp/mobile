@@ -1,6 +1,6 @@
 import 'dart:core';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'models.dart';
+import 'lib/models.dart';
 
 class Globals {
   static late SharedPreferences prefs;
