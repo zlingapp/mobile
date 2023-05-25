@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:zling/ui-elements/overlapping_panels.dart';
 import '../global_state.dart';
-import '../lib/api.dart';
+import 'package:zling/lib/api.dart';
 import '../ui-elements/context_menu.dart';
 
 class LeftView extends StatelessWidget {

@@ -28,7 +28,6 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
-  provider: ^6.0.0
   flutter:
     sdk: flutter
 
@@ -45,6 +44,8 @@ dependencies:
   mediasoup_client_flutter:
     git: 
       url: https://github.com/Blancduman/mediasoup-client-flutter/
+  provider: ^6.0.5
+  flutter_math_fork: ^0.7.1
   # Have to use git msclient as the hosted one is outdated and leads to a webrtc bug: 
   # https://github.com/flutter-webrtc/flutter-webrtc/issues/1079
 

@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+// import 'package:flutter_markdown/flutter_markdown.dart';
+// import 'package:markdown/markdown.dart' as md;
 import 'package:zling/ui-elements/overlapping_panels.dart';
 import 'package:provider/provider.dart';
 import '../global_state.dart';
-import '../lib/models.dart';
-import '../lib/api.dart';
 import 'package:intl/intl.dart';
 import 'package:logging/logging.dart';
 import '../ui-elements/typing_indicator.dart';
+import 'package:zling/lib/api.dart';
+import 'package:zling/lib/models.dart';
+import 'package:zling/lib/latex.dart';
 
 class MessagesView extends StatelessWidget {
   const MessagesView({Key? key}) : super(key: key);
@@ -113,6 +116,22 @@ class MessagesView extends StatelessWidget {
                           ))
                     ])),
               const MessageList(),
+              if (appstate.typing.isNotEmpty)
+                Container(
+                    color: theme.colorScheme.background,
+                    child: Padding(
+                      padding:
+                          const EdgeInsets.only(left: 24, top: 6, bottom: 6),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.max,
+                        children: [
+                          const TypingIndicator(),
+                          Text(typingText(appstate.typing.keys.toList()),
+                              overflow: TextOverflow.fade)
+                        ],
+                      ),
+                    )),
               if (appstate.currentChannel != null) const MessageSendDialog(),
             ]),
           ),
@@ -193,6 +212,23 @@ class _MessageListState extends State<MessageList> {
               .map((entry) {
                 int idx = entry.key;
                 Message message = entry.value;
+                Widget text = Text(
+                  message.content,
+                  style: theme.textTheme.bodyLarge,
+                );
+                if (message.content.split("\$").length >= 3) {
+                  text = latexToRT(text as Text);
+                } else {
+                  // text = MarkdownBody(
+                  //   data: message.content,
+                  //   extensionSet: md.ExtensionSet(
+                  //       md.ExtensionSet.gitHubFlavored.blockSyntaxes, [
+                  //     md.EmojiSyntax(),
+                  //     ...md.ExtensionSet.gitHubFlavored.inlineSyntaxes
+                  //   ]),
+                  // );
+                }
+
                 Message? prevMessage =
                     (idx == 0 ? null : appstate.messages![idx - 1]);
                 if (prevMessage == null ||
@@ -245,10 +281,7 @@ class _MessageListState extends State<MessageList> {
                                                     255, 132, 131, 131)))
                                   ],
                                 ),
-                                Text(
-                                  message.content,
-                                  style: theme.textTheme.bodyLarge,
-                                ),
+                                text,
                               ],
                             ),
                           ),
@@ -260,10 +293,7 @@ class _MessageListState extends State<MessageList> {
                 // just message here
                 return Padding(
                   padding: EdgeInsets.only(left: imgsize + 50, right: 16),
-                  child: Text(
-                    message.content,
-                    style: theme.textTheme.bodyLarge,
-                  ),
+                  child: text,
                 );
               })
               .toList()
@@ -357,6 +387,8 @@ class _MessageSendDialogState extends State<MessageSendDialog> {
                           // onTapOutside: ((_) =>
                           //     {FocusScope.of(context).unfocus()}),
                           decoration: InputDecoration(
+                              contentPadding:
+                                  const EdgeInsets.only(left: 12, right: 12),
                               counterText: "",
                               border: const OutlineInputBorder(
                                   borderRadius:
@@ -377,20 +409,20 @@ class _MessageSendDialogState extends State<MessageSendDialog> {
                       icon: const Icon(Icons.emoji_emotions, size: 24)),
                 ],
               ),
-              appstate.typing.isEmpty
-                  ? const SizedBox(height: 20)
-                  : Padding(
-                      padding: const EdgeInsets.only(left: 60),
-                      child: SizedBox(
-                          height: 20,
-                          child: Row(
-                            children: [
-                              const TypingIndicator(),
-                              Text(typingText(appstate.typing.keys.toList()),
-                                  overflow: TextOverflow.fade)
-                            ],
-                          )),
-                    )
+              // appstate.typing.isEmpty
+              //     ? const SizedBox(height: 20)
+              //     : Padding(
+              //         padding: const EdgeInsets.only(left: 60),
+              //         child: SizedBox(
+              //             height: 20,
+              //             child: Row(
+              //               children: [
+              //                 const TypingIndicator(),
+              //                 Text(typingText(appstate.typing.keys.toList()),
+              //                     overflow: TextOverflow.fade)
+              //               ],
+              //             )),
+              //       )
             ],
           ),
         ),
