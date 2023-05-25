@@ -42,8 +42,11 @@ dependencies:
   web_socket_channel: ^2.4.0
   intl: ^0.18.1
   logging: ^1.1.1
-  mediasoup_client_flutter: ^0.8.1
-
+  mediasoup_client_flutter:
+    git: 
+      url: https://github.com/Blancduman/mediasoup-client-flutter/
+  # Have to use git msclient as the hosted one is outdated and leads to a webrtc bug: 
+  # https://github.com/flutter-webrtc/flutter-webrtc/issues/1079
 
 dev_dependencies:
   flutter_test:
