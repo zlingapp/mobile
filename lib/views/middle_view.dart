@@ -39,7 +39,6 @@ class MessagesView extends StatelessWidget {
           colorFilter: ColorFilter.mode(
               Colors.black.withOpacity(0.5 * dim), BlendMode.darken),
           child: Scaffold(
-            resizeToAvoidBottomInset: true,
             backgroundColor: theme.colorScheme.background,
             appBar: AppBar(
               backgroundColor: theme.colorScheme.secondaryContainer,
@@ -87,52 +86,77 @@ class MessagesView extends StatelessWidget {
                 )
               ],
             ),
-            body: Column(children: [
-              if (appstate.ws == null && appstate.socketReconnecting == false)
-                Container(
-                    color: theme.colorScheme.errorContainer,
-                    child: Row(children: [
-                      const SizedBox(width: 12),
-                      Text("Socket not connected (?!?)",
-                          style: theme.textTheme.bodyLarge!.copyWith(
-                              color: theme.colorScheme.onErrorContainer)),
-                      const Spacer(),
-                      if (appstate.socketConnectingFromBroken)
-                        const CircularProgressIndicator(),
-                      ElevatedButton(
-                          onPressed: () {
-                            if (!appstate.socketConnectingFromBroken) {
-                              logger.info(
-                                  "Socket reconnecting from broken state");
-                              appstate.reconnectingFromBroken();
-                              appstate.initStream();
-                              appstate.socketConnectingFromBroken = false;
-                            }
-                          },
-                          child: Text(
-                            "Connect",
+            body: Stack(children: [
+              Column(children: [
+                if (appstate.ws == null && appstate.socketReconnecting == false)
+                  Container(
+                      color: theme.colorScheme.errorContainer,
+                      child: Row(children: [
+                        const SizedBox(width: 12),
+                        Text("Socket not connected (?!?)",
                             style: theme.textTheme.bodyLarge!.copyWith(
-                                color: theme.colorScheme.onErrorContainer),
-                          ))
-                    ])),
-              const MessageList(),
+                                color: theme.colorScheme.onErrorContainer)),
+                        const Spacer(),
+                        if (appstate.socketConnectingFromBroken)
+                          const CircularProgressIndicator(),
+                        ElevatedButton(
+                            onPressed: () {
+                              if (!appstate.socketConnectingFromBroken) {
+                                logger.info(
+                                    "Socket reconnecting from broken state");
+                                appstate.reconnectingFromBroken();
+                                appstate.initStream();
+                                appstate.socketConnectingFromBroken = false;
+                              }
+                            },
+                            child: Text(
+                              "Connect",
+                              style: theme.textTheme.bodyLarge!.copyWith(
+                                  color: theme.colorScheme.onErrorContainer),
+                            ))
+                      ])),
+                const MessageList(),
+                // if (appstate.typing.isNotEmpty)
+                //   SizedBox(
+                //       height: 30,
+                //       child: Container(
+                //           color: theme.colorScheme.background,
+                //           child: Padding(
+                //             padding: const EdgeInsets.only(left: 24),
+                //             child: Row(
+                //               mainAxisAlignment: MainAxisAlignment.start,
+                //               mainAxisSize: MainAxisSize.max,
+                //               children: [
+                //                 const TypingIndicator(),
+                //                 Text(typingText(appstate.typing.keys.toList()),
+                //                     overflow: TextOverflow.fade)
+                //               ],
+                //             ),
+                //           ))),
+                if (appstate.currentChannel != null) const MessageSendDialog(),
+              ]),
               if (appstate.typing.isNotEmpty)
-                Container(
-                    color: theme.colorScheme.background,
-                    child: Padding(
-                      padding:
-                          const EdgeInsets.only(left: 24, top: 6, bottom: 6),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.max,
-                        children: [
-                          const TypingIndicator(),
-                          Text(typingText(appstate.typing.keys.toList()),
-                              overflow: TextOverflow.fade)
-                        ],
-                      ),
-                    )),
-              if (appstate.currentChannel != null) const MessageSendDialog(),
+                Positioned(
+                  bottom: 64,
+                  child: Opacity(
+                    opacity: 0.8,
+                    child: Container(
+                        width: MediaQuery.of(context).size.width,
+                        color: theme.colorScheme.background,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 24),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.max,
+                            children: [
+                              const TypingIndicator(),
+                              Text(typingText(appstate.typing.keys.toList()),
+                                  overflow: TextOverflow.fade)
+                            ],
+                          ),
+                        )),
+                  ),
+                )
             ]),
           ),
         ));
@@ -237,63 +261,71 @@ class _MessageListState extends State<MessageList> {
                         message.createdAt.isAfter(prevMessage.createdAt
                             .add(const Duration(minutes: 10))))) {
                   // Here we need an icon and username
-                  return Padding(
-                    padding: const EdgeInsets.only(left: 24, top: 8, right: 16),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: ClipRRect(
-                            borderRadius:
-                                BorderRadius.circular(48), // Image border
-                            child: SizedBox.fromSize(
-                              size: Size.fromRadius(imgsize), // Image radius
-                              child: Image.network(
-                                  "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png",
-                                  fit: BoxFit.cover),
+                  return InkWell(
+                    onTap: () {},
+                    child: Padding(
+                      padding:
+                          const EdgeInsets.only(left: 24, top: 8, right: 16),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: ClipRRect(
+                              borderRadius:
+                                  BorderRadius.circular(48), // Image border
+                              child: SizedBox.fromSize(
+                                size: Size.fromRadius(imgsize), // Image radius
+                                child: Image.network(
+                                    "https://upload.wikimedia.org/wikipedia/commons/7/7c/Profile_avatar_placeholder_large.png",
+                                    fit: BoxFit.cover),
+                              ),
                             ),
                           ),
-                        ),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(left: 8),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                        message.author.nickname ??
-                                            message.author.name,
-                                        style: theme.primaryTextTheme.bodyLarge!
-                                            .copyWith(
-                                                color: const Color.fromARGB(
-                                                    255, 170, 170, 170),
-                                                fontWeight: FontWeight.w600)),
-                                    const SizedBox(width: 4),
-                                    Text(formatTime(message.createdAt),
-                                        style: theme
-                                            .primaryTextTheme.labelMedium!
-                                            .copyWith(
-                                                color: const Color.fromARGB(
-                                                    255, 132, 131, 131)))
-                                  ],
-                                ),
-                                text,
-                              ],
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                          message.author.nickname ??
+                                              message.author.name,
+                                          style: theme
+                                              .primaryTextTheme.bodyLarge!
+                                              .copyWith(
+                                                  color: const Color.fromARGB(
+                                                      255, 170, 170, 170),
+                                                  fontWeight: FontWeight.w600)),
+                                      const SizedBox(width: 4),
+                                      Text(formatTime(message.createdAt),
+                                          style: theme
+                                              .primaryTextTheme.labelMedium!
+                                              .copyWith(
+                                                  color: const Color.fromARGB(
+                                                      255, 132, 131, 131)))
+                                    ],
+                                  ),
+                                  text,
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   );
                 }
                 // just message here
-                return Padding(
-                  padding: EdgeInsets.only(left: imgsize + 50, right: 16),
-                  child: text,
+                return InkWell(
+                  onTap: () {},
+                  child: Padding(
+                    padding: EdgeInsets.only(left: imgsize + 50, right: 16),
+                    child: text,
+                  ),
                 );
               })
               .toList()
@@ -344,6 +376,7 @@ class _MessageSendDialogState extends State<MessageSendDialog> {
     }
     return SafeArea(
       child: Container(
+        height: 64,
         width: MediaQuery.of(context).size.width,
         color: theme.colorScheme.secondaryContainer,
         child: Padding(

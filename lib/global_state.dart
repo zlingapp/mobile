@@ -8,9 +8,10 @@ import 'globals.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'dart:async';
 import 'package:logging/logging.dart';
+// import 'lib/voice.dart';
 
 // Global State to be passed around to different widgets
-class GlobalState extends ChangeNotifier {
+class GlobalState extends ChangeNotifier with WidgetsBindingObserver {
   bool? loggedIn;
 
   // Selected guild from the left sidebar
@@ -75,7 +76,7 @@ class GlobalState extends ChangeNotifier {
     getMessages();
     notifyListeners();
     if (ws == null) {
-      await wsFirstInit.future;
+      await _wsFirstInit.future;
     }
     subUnsub(sub: guild, unsub: oldCurrentGuild);
   }
@@ -89,11 +90,16 @@ class GlobalState extends ChangeNotifier {
 
   Channel? currentChannel;
   void setChannel(Channel? channel) async {
+    if (typing.isNotEmpty) {
+      typing.values.map((e) => e.cancel());
+      typing.removeWhere(
+          (__, _) => true); // Its either make typing non-final or this...
+    }
     var oldCurrentChannel = currentChannel;
     currentChannel = channel;
     notifyListeners();
     if (ws == null) {
-      await wsFirstInit.future;
+      await _wsFirstInit.future;
     }
     subUnsub(sub: channel, unsub: oldCurrentChannel);
   }
@@ -153,7 +159,11 @@ class GlobalState extends ChangeNotifier {
     moreMessagesToLoad = b;
     if (m != null) {
       m = m.where((e) => e.content.trim() != "").toList();
-      messages = (before == null && messages != null) ? m : m + messages!;
+      if (before == null || messages == null) {
+        messages = m;
+      } else {
+        messages = m + messages!;
+      }
     } else {
       messages = null;
     }
@@ -182,10 +192,11 @@ class GlobalState extends ChangeNotifier {
 
   WebSocketChannel? ws;
   bool socketReconnecting = false;
-  Completer wsFirstInit = Completer();
+  Completer _wsFirstInit = Completer();
+  StreamSubscription? _sub;
   void initStream() async {
     if (socketReconnecting = true) {
-      await Future.delayed(const Duration(seconds: 5));
+      await Future.delayed(const Duration(seconds: 3));
     }
     socketReconnecting = false;
     ws = await ApiService().wsConnect(this);
@@ -196,15 +207,20 @@ class GlobalState extends ChangeNotifier {
       initStream();
       return;
     }
-    ws!.stream.listen(handleEvent, onDone: () {
+    _sub = ws!.stream.listen(handleEvent, onDone: () {
       _logger.info("Socket closed, attempting reconnect");
-      wsFirstInit = Completer();
+      _wsFirstInit = Completer();
+      // socketReconnecting = true;
+      initStream();
+    }, onError: (e) {
+      _logger.warning("Events socket error, reconnecting - ${e.toString()}");
       socketReconnecting = true;
+      _wsFirstInit = Completer();
       initStream();
     });
     ws!.sink.add("heartbeat");
     notifyListeners();
-    wsFirstInit.complete();
+    _wsFirstInit.complete();
     return;
   }
 
@@ -215,6 +231,10 @@ class GlobalState extends ChangeNotifier {
       if (currentChannel == null || event.topic.id != currentChannel!.id) {
         _logger.info("Useless guild subscription detected (message)");
         return;
+      }
+      if (typing.containsKey(event.messageEvent.author)) {
+        typing[event.messageEvent.author]?.cancel();
+        typing.remove(event.messageEvent.author);
       }
       messages ??= [];
       messages!.add(Message(
@@ -296,15 +316,36 @@ class GlobalState extends ChangeNotifier {
         }
       }
     });
+    WidgetsBinding.instance.addObserver(this);
   }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (ws == null) {
+        _wsFirstInit = Completer();
+        initStream();
+      }
+    }
+  }
+
+  // VoiceState voiceState = VoiceState.disconected;
+  // Map<String, Peer> voicePeers = {};
+  // VoiceChannelInfo? voiceChannelCurrent;
+  // void set(Function callback) {
+  //   callback();
+  //   notifyListeners();
+  // }
 
   @override
   void dispose() {
     timer?.cancel();
+    _sub?.cancel();
     ws?.sink.close();
     for (Timer t in typing.values) {
       t.cancel();
     }
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 }
