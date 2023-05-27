@@ -175,15 +175,40 @@ class ChannelsView extends StatelessWidget {
                                               appstate.currentChannel ==
                                                   channel,
                                       horizontalTitleGap: 0,
+                                      visualDensity: const VisualDensity(
+                                          horizontal: 0, vertical: -4),
                                       title: Text(channel.name),
                                       onTap: () {
                                         // Voice Stuff Here
                                       },
-                                    )))
+                                    ))),
                     ],
                   ),
                 ),
-              )
+              ),
+              if (appstate.channels != null) ...[
+                Center(
+                  child: ElevatedButton(
+                      onPressed: () {
+                        showDialog(
+                            context: context,
+                            builder: (context) =>
+                                const CreateChannelDialog(type: "Text"));
+                      },
+                      child: const Text("Create text channel")),
+                ),
+                Center(
+                  child: ElevatedButton(
+                      onPressed: () {
+                        showDialog(
+                            context: context,
+                            builder: (context) =>
+                                const CreateChannelDialog(type: "Voice"));
+                      },
+                      child: const Text("Create voice channel")),
+                ),
+                const SizedBox(height: 8)
+              ]
             ],
           ),
         ),
@@ -549,5 +574,83 @@ class _CreateServerDialogState extends State<CreateServerDialog> {
                       .copyWith(color: theme.colorScheme.error)))
       ],
     );
+  }
+}
+
+class CreateChannelDialog extends StatefulWidget {
+  const CreateChannelDialog({required this.type, super.key});
+  final String type;
+
+  @override
+  State<CreateChannelDialog> createState() => _CreateChannelDialogState();
+}
+
+class _CreateChannelDialogState extends State<CreateChannelDialog> {
+  String _currentText = "";
+  bool? _success;
+
+  Future<void> _submit(GlobalState state, {String? text}) async {
+    text ??= _currentText;
+    if (text == "") return;
+    if (state.currentGuild == null) return;
+    var res = await ApiService().createChannel(
+        text, widget.type.toLowerCase(), state.currentGuild!.id, state);
+    setState(() {
+      _success = res;
+    });
+    return;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var theme = Theme.of(context);
+    var appstate = context.watch<GlobalState>();
+    return SimpleDialog(contentPadding: const EdgeInsets.all(20), children: [
+      TextField(
+        autocorrect: false,
+        decoration: InputDecoration(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(24)),
+            labelText: "${widget.type} Channel Name"),
+        onChanged: (value) => setState(() {
+          _currentText = value;
+        }),
+        onSubmitted: (value) => _submit(appstate, text: value).then((_) {
+          if (_success == true) Navigator.of(context).pop(context);
+        }),
+      ),
+      const SizedBox(height: 22),
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          ElevatedButton(
+              onPressed: () => _submit(appstate).then((_) {
+                    if (_success == true) Navigator.of(context).pop(context);
+                  }),
+              style: ButtonStyle(
+                  backgroundColor: MaterialStateProperty.all(
+                      theme.colorScheme.primaryContainer)),
+              child: Text("Create",
+                  style: theme.textTheme.labelLarge!
+                      .copyWith(color: theme.colorScheme.onPrimaryContainer))),
+          const SizedBox(width: 12),
+          ElevatedButton(
+              style: ButtonStyle(
+                  backgroundColor:
+                      MaterialStateProperty.all(theme.colorScheme.background)),
+              onPressed: () {
+                Navigator.of(context).pop(context);
+              },
+              child: Text("Cancel",
+                  style: theme.textTheme.labelLarge!
+                      .copyWith(color: theme.colorScheme.onBackground)))
+        ],
+      ),
+      if (_success == false)
+        Center(
+            child: Text("Channel creation failed.",
+                style: theme.textTheme.labelMedium!
+                    .copyWith(color: theme.colorScheme.error)))
+    ]);
   }
 }

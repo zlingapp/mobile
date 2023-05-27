@@ -299,6 +299,18 @@ class ApiService {
     return true;
   }
 
+  Future<bool> createChannel(
+      String name, String type, String gid, GlobalState state) async {
+    var response = await authFetch(
+        HttpMethod.post, channelsEndpoint(gid), state,
+        body: jsonEncode({"name": name, "type": type}));
+    if (response == null ||
+        !(200 <= response.statusCode && response.statusCode < 300)) {
+      return false;
+    }
+    return true;
+  }
+
   Future<bool> joinGuild(String gid, GlobalState state) async {
     var response =
         await authFetch(HttpMethod.get, joinGuildEndpoint(gid), state);

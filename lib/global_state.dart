@@ -88,6 +88,13 @@ class GlobalState extends ChangeNotifier with WidgetsBindingObserver {
     return guilds!.where((e) => e.id == gid).toList()[0];
   }
 
+  Future<Channel?> resolveChannel(String cid) async {
+    await getChannels();
+    if (channels == null) return null;
+    if (channels!.where((e) => e.id == cid).isEmpty) return null;
+    return channels!.where((e) => e.id == cid).toList()[0];
+  }
+
   Channel? currentChannel;
   void setChannel(Channel? channel) async {
     if (typing.isNotEmpty) {
@@ -134,7 +141,7 @@ class GlobalState extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   List<Channel>? channels;
-  void getChannels() async {
+  Future<void> getChannels() async {
     if (currentGuild == null) {
       return;
     }
