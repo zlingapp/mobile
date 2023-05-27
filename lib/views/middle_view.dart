@@ -29,137 +29,145 @@ class MessagesView extends StatelessWidget {
           ? 1
           : 0;
     }
-    return GestureDetector(
-        onTap: () {
-          if (appstate.currentMenuSide != RevealSide.main) {
-            OverlappingPanels.of(context)?.setCenter();
-          }
-        },
-        child: ColorFiltered(
-          colorFilter: ColorFilter.mode(
-              Colors.black.withOpacity(0.5 * dim), BlendMode.darken),
-          child: Scaffold(
-            backgroundColor: theme.colorScheme.background,
-            appBar: AppBar(
-              backgroundColor: theme.colorScheme.secondaryContainer,
-              title: Row(
-                children: [
-                  if (appstate.currentChannel != null)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(children: [
-                          const Text(
-                            '#',
-                            style: TextStyle(color: Colors.white54),
-                          ),
-                          Text(appstate.currentChannel!.name)
-                        ]),
-                      ],
-                    ),
+    return WillPopScope(
+      onWillPop: () async {
+        OverlappingPanels.of(context)?.setCenter();
+        return false;
+      },
+      child: GestureDetector(
+          onTap: () {
+            if (appstate.currentMenuSide != RevealSide.main) {
+              OverlappingPanels.of(context)?.setCenter();
+            }
+          },
+          child: ColorFiltered(
+            colorFilter: ColorFilter.mode(
+                Colors.black.withOpacity(0.5 * dim), BlendMode.darken),
+            child: Scaffold(
+              backgroundColor: theme.colorScheme.background,
+              appBar: AppBar(
+                backgroundColor: theme.colorScheme.secondaryContainer,
+                title: Row(
+                  children: [
+                    if (appstate.currentChannel != null)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            const Text(
+                              '#',
+                              style: TextStyle(color: Colors.white54),
+                            ),
+                            Text(appstate.currentChannel!.name)
+                          ]),
+                        ],
+                      ),
+                  ],
+                ),
+                leading: IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: () {
+                    OverlappingPanels.of(context)?.reveal(RevealSide.left);
+                  },
+                ),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.call),
+                    onPressed: () {
+                      OverlappingPanels.of(context)?.reveal(RevealSide.right);
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.camera_alt),
+                    onPressed: () {
+                      OverlappingPanels.of(context)?.reveal(RevealSide.right);
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.group),
+                    onPressed: () {
+                      OverlappingPanels.of(context)?.reveal(RevealSide.right);
+                    },
+                  )
                 ],
               ),
-              leading: IconButton(
-                icon: const Icon(Icons.menu),
-                onPressed: () {
-                  OverlappingPanels.of(context)?.reveal(RevealSide.left);
-                },
-              ),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.call),
-                  onPressed: () {
-                    OverlappingPanels.of(context)?.reveal(RevealSide.right);
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.camera_alt),
-                  onPressed: () {
-                    OverlappingPanels.of(context)?.reveal(RevealSide.right);
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.group),
-                  onPressed: () {
-                    OverlappingPanels.of(context)?.reveal(RevealSide.right);
-                  },
-                )
-              ],
-            ),
-            body: Stack(children: [
-              Column(children: [
-                if (appstate.ws == null && appstate.socketReconnecting == false)
-                  Container(
-                      color: theme.colorScheme.errorContainer,
-                      child: Row(children: [
-                        const SizedBox(width: 12),
-                        Text("Socket not connected (?!?)",
-                            style: theme.textTheme.bodyLarge!.copyWith(
-                                color: theme.colorScheme.onErrorContainer)),
-                        const Spacer(),
-                        if (appstate.socketConnectingFromBroken)
-                          const CircularProgressIndicator(),
-                        ElevatedButton(
-                            onPressed: () {
-                              if (!appstate.socketConnectingFromBroken) {
-                                logger.info(
-                                    "Socket reconnecting from broken state");
-                                appstate.reconnectingFromBroken();
-                                appstate.initStream();
-                                appstate.socketConnectingFromBroken = false;
-                              }
-                            },
-                            child: Text(
-                              "Connect",
+              body: Stack(children: [
+                Column(children: [
+                  if (appstate.ws == null &&
+                      appstate.socketReconnecting == false)
+                    Container(
+                        color: theme.colorScheme.errorContainer,
+                        child: Row(children: [
+                          const SizedBox(width: 12),
+                          Text("Socket not connected (?!?)",
                               style: theme.textTheme.bodyLarge!.copyWith(
-                                  color: theme.colorScheme.onErrorContainer),
-                            ))
-                      ])),
-                const MessageList(),
-                // if (appstate.typing.isNotEmpty)
-                //   SizedBox(
-                //       height: 30,
-                //       child: Container(
-                //           color: theme.colorScheme.background,
-                //           child: Padding(
-                //             padding: const EdgeInsets.only(left: 24),
-                //             child: Row(
-                //               mainAxisAlignment: MainAxisAlignment.start,
-                //               mainAxisSize: MainAxisSize.max,
-                //               children: [
-                //                 const TypingIndicator(),
-                //                 Text(typingText(appstate.typing.keys.toList()),
-                //                     overflow: TextOverflow.fade)
-                //               ],
-                //             ),
-                //           ))),
-                if (appstate.currentChannel != null) const MessageSendDialog(),
+                                  color: theme.colorScheme.onErrorContainer)),
+                          const Spacer(),
+                          if (appstate.socketConnectingFromBroken)
+                            const CircularProgressIndicator(),
+                          ElevatedButton(
+                              onPressed: () {
+                                if (!appstate.socketConnectingFromBroken) {
+                                  logger.info(
+                                      "Socket reconnecting from broken state");
+                                  appstate.reconnectingFromBroken();
+                                  appstate.initStream();
+                                  appstate.socketConnectingFromBroken = false;
+                                }
+                              },
+                              child: Text(
+                                "Connect",
+                                style: theme.textTheme.bodyLarge!.copyWith(
+                                    color: theme.colorScheme.onErrorContainer),
+                              ))
+                        ])),
+                  const MessageList(),
+                  // if (appstate.typing.isNotEmpty)
+                  //   SizedBox(
+                  //       height: 30,
+                  //       child: Container(
+                  //           color: theme.colorScheme.background,
+                  //           child: Padding(
+                  //             padding: const EdgeInsets.only(left: 24),
+                  //             child: Row(
+                  //               mainAxisAlignment: MainAxisAlignment.start,
+                  //               mainAxisSize: MainAxisSize.max,
+                  //               children: [
+                  //                 const TypingIndicator(),
+                  //                 Text(typingText(appstate.typing.keys.toList()),
+                  //                     overflow: TextOverflow.fade)
+                  //               ],
+                  //             ),
+                  //           ))),
+                  if (appstate.currentChannel != null)
+                    const MessageSendDialog(),
+                ]),
+                if (appstate.typing.isNotEmpty)
+                  Positioned(
+                    bottom: 64,
+                    child: Opacity(
+                      opacity: 0.8,
+                      child: Container(
+                          width: MediaQuery.of(context).size.width,
+                          color: theme.colorScheme.background,
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 24),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.max,
+                              children: [
+                                const TypingIndicator(),
+                                Text(typingText(appstate.typing.keys.toList()),
+                                    overflow: TextOverflow.fade)
+                              ],
+                            ),
+                          )),
+                    ),
+                  )
               ]),
-              if (appstate.typing.isNotEmpty)
-                Positioned(
-                  bottom: 64,
-                  child: Opacity(
-                    opacity: 0.8,
-                    child: Container(
-                        width: MediaQuery.of(context).size.width,
-                        color: theme.colorScheme.background,
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 24),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.max,
-                            children: [
-                              const TypingIndicator(),
-                              Text(typingText(appstate.typing.keys.toList()),
-                                  overflow: TextOverflow.fade)
-                            ],
-                          ),
-                        )),
-                  ),
-                )
-            ]),
-          ),
-        ));
+            ),
+          )),
+    );
   }
 }
 
@@ -229,7 +237,7 @@ class _MessageListState extends State<MessageList> {
         shrinkWrap: true,
         scrollDirection: Axis.vertical,
         children: [
-          const SizedBox(height: 24),
+          const SizedBox(height: 12),
           ...appstate.messages!
               .asMap()
               .entries
@@ -414,8 +422,8 @@ class _MessageSendDialogState extends State<MessageSendDialog> {
                               _currentMessage = value;
                             });
                           },
-                          onEditingComplete: () =>
-                              FocusScope.of(context).unfocus(),
+                          // onEditingComplete: () =>
+                          // FocusScope.of(context).unfocus(),
                           onSubmitted: ((_) => {_send(appstate)}),
                           // onTapOutside: ((_) =>
                           //     {FocusScope.of(context).unfocus()}),

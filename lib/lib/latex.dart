@@ -52,6 +52,8 @@ Text latexToRT(Text code,
           child: Math.tex(
             laTeXMatch.group(3)?.trim() ?? '',
             textStyle: defaultTextStyle,
+            onErrorFallback: (_) => Text(laTeXMatch.group(3)?.trim() ?? '',
+                style: defaultTextStyle),
           ),
         ),
       );
@@ -64,6 +66,8 @@ Text latexToRT(Text code,
             child: Math.tex(
               laTeXMatch.group(6)?.trim() ?? '',
               textStyle: defaultTextStyle,
+              onErrorFallback: (_) => Text(laTeXMatch.group(6)?.trim() ?? '',
+                  style: defaultTextStyle),
             ),
           ),
         ),

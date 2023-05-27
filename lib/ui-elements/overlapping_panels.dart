@@ -57,11 +57,11 @@ class OverlappingPanelsState extends State<OverlappingPanels>
   }
 
   void setCenter() {
+    if (widget.appstate == null ||
+        widget.appstate!.currentMenuSide == RevealSide.main) return;
     if (widget.appstate?.inMove == false) {
       widget.appstate?.moving();
     }
-    if (widget.appstate == null ||
-        widget.appstate!.currentMenuSide == RevealSide.main) return;
     final animationController = AnimationController(
         vsync: this, duration: const Duration(milliseconds: 200));
 

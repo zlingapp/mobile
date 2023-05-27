@@ -209,7 +209,7 @@ class GuildScrollBar extends StatelessWidget {
         child: appstate.guilds == null || appstate.guilds!.isEmpty
             ? const Center(child: CircularProgressIndicator())
             : SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
+                physics: const ClampingScrollPhysics(),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
                       minHeight: MediaQuery.of(context).size.height),
