@@ -21,7 +21,6 @@ class _LoginViewState extends State<LoginView> {
 
   static final emailRegex = RegExp(
       r"""^(([^<>()[\]\.,;:\s@\"]+(\.[^<>()[\]\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$""");
-  static final passwordRegex = RegExp(r"""^[a-zA-Z0-9_]{3,16}$""");
 
   void validateEmail() {
     RegExpMatch? match = emailRegex.firstMatch(_emailField);
@@ -33,12 +32,7 @@ class _LoginViewState extends State<LoginView> {
   }
 
   void validatePassword() {
-    RegExpMatch? match = passwordRegex.firstMatch(_passwordField);
-    if (match == null) {
-      _invalidPassword = true;
-    } else {
-      _invalidPassword = false;
-    }
+    _invalidPassword = _passwordField.length > 128;
   }
 
   @override
@@ -79,6 +73,22 @@ class _LoginViewState extends State<LoginView> {
                         validateEmail();
                       });
                     },
+                    onSubmitted: (value) {
+                      if (_loadingOrFailed != true &&
+                          !_invalidEmail &&
+                          !_invalidPassword) {
+                        _loadingOrFailed = true;
+                        appstate
+                            .login(_emailField, _passwordField)
+                            .then((value) => (setState(() {
+                                  if (value) {
+                                    _loadingOrFailed = false;
+                                  } else {
+                                    _loadingOrFailed = null;
+                                  }
+                                })));
+                      }
+                    },
                     decoration: InputDecoration(
                         border: const OutlineInputBorder(),
                         hintText: "Email",
@@ -106,6 +116,22 @@ class _LoginViewState extends State<LoginView> {
                           _passwordField = value;
                           validatePassword();
                         });
+                      },
+                      onSubmitted: (value) {
+                        if (_loadingOrFailed != true &&
+                            !_invalidEmail &&
+                            !_invalidPassword) {
+                          _loadingOrFailed = true;
+                          appstate
+                              .login(_emailField, _passwordField)
+                              .then((value) => (setState(() {
+                                    if (value) {
+                                      _loadingOrFailed = false;
+                                    } else {
+                                      _loadingOrFailed = null;
+                                    }
+                                  })));
+                        }
                       },
                       obscureText: !_passwordVisible,
                       decoration: InputDecoration(

@@ -123,13 +123,13 @@ class User {
   String id;
   String name;
   String avatar;
-  String email;
+  String? email;
 
   User({
     required this.id,
     required this.name,
     required this.avatar,
-    required this.email,
+    this.email,
   });
 
   @override
@@ -140,12 +140,21 @@ class User {
   @override
   int get hashCode => Object.hash(id, "");
 
-  factory User.fromJson(Map<String, dynamic> json) => User(
-        id: json["id"],
-        name: json["name"],
-        avatar: json["avatar"],
-        email: json["email"],
-      );
+  factory User.fromJson(Map<String, dynamic> json) {
+    if (json.containsKey("email")) {
+      return User(
+          id: json["id"],
+          name: json["name"],
+          avatar: json["avatar"],
+          email: json["email"]);
+    } else {
+      return User(
+          id: json["id"],
+          name: json["name"],
+          avatar: json["avatar"],
+          email: json["email"]);
+    }
+  }
 
   Map<String, dynamic> toJson() => {
         "id": id,

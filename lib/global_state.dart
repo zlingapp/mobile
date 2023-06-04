@@ -8,7 +8,7 @@ import 'globals.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'dart:async';
 import 'package:logging/logging.dart';
-// import 'lib/voice.dart';
+import 'lib/voice.dart';
 
 // Global State to be passed around to different widgets
 class GlobalState extends ChangeNotifier with WidgetsBindingObserver {
@@ -67,6 +67,9 @@ class GlobalState extends ChangeNotifier with WidgetsBindingObserver {
   void setGuild(Guild guild) async {
     var oldCurrentGuild = currentGuild;
     currentGuild = guild;
+
+    // If we have used this guild before and selected a channel, resume to that channel.
+    // Otherwise, unselect channels
     if (prevChannelSelection.containsKey(guild)) {
       setChannel(prevChannelSelection[guild]);
     } else if (currentChannel != null) {
@@ -75,12 +78,14 @@ class GlobalState extends ChangeNotifier with WidgetsBindingObserver {
     getChannels();
     getMessages();
     notifyListeners();
+    // If our websocket isnt connected, wait until it is before subscribing
     if (ws == null) {
       await _wsFirstInit.future;
     }
     subUnsub(sub: guild, unsub: oldCurrentGuild);
   }
 
+  // Turn a string guild id into a Guild object (only if the user is in that guild)
   Future<Guild?> resolveGuild(String gid) async {
     await getGuilds();
     if (guilds == null) return null;
@@ -98,6 +103,7 @@ class GlobalState extends ChangeNotifier with WidgetsBindingObserver {
   Channel? currentChannel;
   void setChannel(Channel? channel) async {
     if (typing.isNotEmpty) {
+      // When we change channels we want to clear all the typing timers
       typing.values.map((e) => e.cancel());
       typing.removeWhere(
           (__, _) => true); // Its either make typing non-final or this...
@@ -111,6 +117,7 @@ class GlobalState extends ChangeNotifier with WidgetsBindingObserver {
     subUnsub(sub: channel, unsub: oldCurrentChannel);
   }
 
+  // Store whether the panels are currently sliding or not
   bool inMove = false;
   void stationary() {
     inMove = false;
@@ -133,10 +140,6 @@ class GlobalState extends ChangeNotifier with WidgetsBindingObserver {
   late Map<Guild, Channel> prevChannelSelection;
   Future<void> getGuilds() async {
     guilds = (await ApiService().getGuilds(this));
-    if (guilds == null) {
-      notifyListeners();
-      return;
-    }
     notifyListeners();
   }
 
@@ -153,22 +156,24 @@ class GlobalState extends ChangeNotifier with WidgetsBindingObserver {
   bool moreMessagesToLoad = false;
   Future<void> getMessages({int limit = 50, DateTime? before}) async {
     if (currentGuild == null || currentChannel == null) {
-      messages = [];
+      messages = null;
       moreMessagesToLoad = false;
       notifyListeners();
       return;
     }
     List<Message>? m;
-    bool b;
+    bool b; // whether we have more messages above to load
     (m, b) = (await ApiService().getMessages(
         currentGuild!.id, currentChannel!.id, limit, this,
         before: before));
     moreMessagesToLoad = b;
     if (m != null) {
+      // Get rid of empty messages (shouldn't do anything anyway tho)
       m = m.where((e) => e.content.trim() != "").toList();
       if (before == null || messages == null) {
         messages = m;
       } else {
+        // Add the new messages to the start of the existing messages
         messages = m + messages!;
       }
     } else {
@@ -187,6 +192,7 @@ class GlobalState extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void logOut() {
+    // Notify listeners of logout, which will take us immediately to the login screen
     loggedIn = false;
     notifyListeners();
   }
@@ -203,6 +209,7 @@ class GlobalState extends ChangeNotifier with WidgetsBindingObserver {
   StreamSubscription? _sub;
   void initStream() async {
     if (socketReconnecting = true) {
+      // Don't spam connections if it isnt working
       await Future.delayed(const Duration(seconds: 3));
     }
     socketReconnecting = false;
@@ -217,7 +224,7 @@ class GlobalState extends ChangeNotifier with WidgetsBindingObserver {
     _sub = ws!.stream.listen(handleEvent, onDone: () {
       _logger.info("Socket closed, attempting reconnect");
       _wsFirstInit = Completer();
-      // socketReconnecting = true;
+      socketReconnecting = true;
       initStream();
     }, onError: (e) {
       _logger.warning("Events socket error, reconnecting - ${e.toString()}");
@@ -226,7 +233,7 @@ class GlobalState extends ChangeNotifier with WidgetsBindingObserver {
       initStream();
     });
     ws!.sink.add("heartbeat");
-    notifyListeners();
+    // notifyListeners();
     _wsFirstInit.complete();
     return;
   }
@@ -290,7 +297,6 @@ class GlobalState extends ChangeNotifier with WidgetsBindingObserver {
   Future<bool> login(String email, String password) async {
     User? res = (await ApiService().logIn(email, password, this));
     if (res == null) {
-      notifyListeners();
       return false;
     }
     Globals.localUser = res;
@@ -298,7 +304,6 @@ class GlobalState extends ChangeNotifier with WidgetsBindingObserver {
     getGuilds();
     getChannels();
     initStream();
-    notifyListeners();
     return true;
   }
 
@@ -336,13 +341,13 @@ class GlobalState extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  // VoiceState voiceState = VoiceState.disconected;
-  // Map<String, Peer> voicePeers = {};
-  // VoiceChannelInfo? voiceChannelCurrent;
-  // void set(Function callback) {
-  //   callback();
-  //   notifyListeners();
-  // }
+  VoiceState voiceState = VoiceState.disconected;
+  Map<String, Peer> voicePeers = {};
+  VoiceChannelInfo? voiceChannelCurrent;
+  void set(Function callback) {
+    callback();
+    notifyListeners();
+  }
 
   @override
   void dispose() {

@@ -10,15 +10,15 @@ class LeftView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final appstate = context.watch<GlobalState>();
     final theme = Theme.of(context);
     return Scaffold(
       body: Container(
         color: theme.colorScheme.background,
         child: Row(
           children: [
-            GuildScrollBar(appstate: appstate),
+            const GuildScrollBar(),
             const ChannelsView(),
+            // Add some space for the peeking out main panel
             Container(width: 60)
           ],
         ),
@@ -34,8 +34,10 @@ class ChannelsView extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final appstate = context.watch<GlobalState>();
+    // Take up the rest of the space available to us
     return Expanded(
       child: SafeArea(
+        // And dont get covered by any device features plaease
         child: Container(
           decoration: BoxDecoration(
               color: theme.colorScheme.secondaryContainer,
@@ -46,6 +48,7 @@ class ChannelsView extends StatelessWidget {
               Container(
                 decoration: BoxDecoration(
                     border: Border(
+                        // Divisor between guild name and channel list
                         bottom: BorderSide(color: theme.colorScheme.outline))),
                 padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
                 child: Column(
@@ -54,6 +57,7 @@ class ChannelsView extends StatelessWidget {
                     Row(
                       children: [
                         Expanded(
+                            // Server name
                             child: appstate.currentGuild == null
                                 ? const Text("No Server Selected",
                                     style: TextStyle(
@@ -66,6 +70,7 @@ class ChannelsView extends StatelessWidget {
                                         fontSize: 18),
                                   )),
                         IconButton(
+                            // Server options button - not implemented
                             onPressed: () {},
                             icon: const Icon(Icons.more_horiz))
                       ],
@@ -92,7 +97,7 @@ class ChannelsView extends StatelessWidget {
                               Icon(Icons.bedtime,
                                   color: theme.colorScheme.onPrimaryContainer,
                                   size: 48),
-                              const Text("No Channels Here")
+                              const Text("No Channels Here") // Empty server
                             ])),
 
                       // Text channel category label only if there is a textchannel
@@ -113,10 +118,13 @@ class ChannelsView extends StatelessWidget {
                         ),
                       if (appstate.currentGuild != null)
                         ...(appstate.channels == null
-                            ? const [Center(child: CircularProgressIndicator())]
+                            ? const [
+                                Center(child: CircularProgressIndicator())
+                              ] // This means our channels are loading
                             : appstate.channels!
                                 .where((i) => (i.type == "text"))
                                 .map((channel) => BasicContextMenu(
+                                      // Wrap our tiles in the context menu so we can long tap to copy id
                                       id: channel.id,
                                       child: ListTile(
                                         leading: const Icon(Icons.tag),
@@ -133,13 +141,10 @@ class ChannelsView extends StatelessWidget {
                                             appstate.prevChannelSelection[
                                                     appstate.currentGuild!] =
                                                 channel;
-                                          }
-                                          // appstate.prevChannelSelection![appstate
-                                          // .channels!
-                                          // .indexOf(channel)] =
-                                          // appstate.channels!.indexOf(channel);
+                                          } // When we change channels, save it so it can be remembered on guild switches
                                           appstate.getMessages().then((value) =>
                                               {
+                                                // When we get our messages we want to slide to center
                                                 OverlappingPanels.of(context)
                                                     ?.setCenter()
                                               });
@@ -186,6 +191,7 @@ class ChannelsView extends StatelessWidget {
                   ),
                 ),
               ),
+              // Buttons to create new channels
               if (appstate.channels != null) ...[
                 Center(
                   child: ElevatedButton(
@@ -220,54 +226,57 @@ class ChannelsView extends StatelessWidget {
 class GuildScrollBar extends StatelessWidget {
   const GuildScrollBar({
     super.key,
-    required this.appstate,
   });
-
-  final GlobalState appstate;
 
   @override
   Widget build(BuildContext context) {
+    final appstate = context.watch<GlobalState>();
     final theme = Theme.of(context);
     return Container(
       color: theme.colorScheme.background,
       child: SafeArea(
+        // Dont get covered by device features
         child: appstate.guilds == null || appstate.guilds!.isEmpty
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(
+                child: CircularProgressIndicator()) // Guilds are loading in
             : SingleChildScrollView(
+                // Clamping scroll phys so the icons dont go off the screen
                 physics: const ClampingScrollPhysics(),
                 child: ConstrainedBox(
+                  // Make it take up the whole height available to us
                   constraints: BoxConstraints(
                       minHeight: MediaQuery.of(context).size.height),
                   child: Column(
                     children: [
                       const SizedBox(height: 16),
-                      ...(appstate.guilds == null
-                          ? const [CircularProgressIndicator()]
-                          : appstate.guilds!.map(
-                              (e) {
-                                return BasicContextMenu(
-                                  id: e.id,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(
-                                        left: 8, right: 8, top: 4, bottom: 4),
-                                    child: GestureDetector(
-                                        onTap: () {
-                                          if (e == appstate.currentGuild) {
-                                            return;
-                                          }
-                                          if (appstate.guilds == null ||
-                                              appstate.guilds!.isEmpty) return;
-                                          appstate.setGuild(e);
-                                        },
-                                        child: GuildIcon(
-                                          iconURL:
-                                              "https://via.placeholder.com/32",
-                                          selected: e == appstate.currentGuild,
-                                        )),
-                                  ),
-                                );
-                              },
-                            ).toList()),
+                      ...appstate.guilds!.map(
+                        (e) {
+                          // We want to be able to long tap and copy our guild ids
+                          return BasicContextMenu(
+                            id: e.id,
+                            child: Padding(
+                              padding: const EdgeInsets.only(
+                                  left: 8, right: 8, top: 4, bottom: 4),
+                              child: GestureDetector(
+                                  onTap: () {
+                                    // Dont waste time with more requests if that guild is already selected
+                                    if (e == appstate.currentGuild) {
+                                      return;
+                                    }
+                                    if (appstate.guilds == null ||
+                                        appstate.guilds!.isEmpty) return;
+                                    appstate.setGuild(e);
+                                  },
+                                  child: GuildIcon(
+                                    // Replace with real icon later
+                                    iconURL: "https://via.placeholder.com/32",
+                                    selected: e == appstate.currentGuild,
+                                  )),
+                            ),
+                          );
+                        },
+                      ).toList(),
+                      // Plus button to add or join a server
                       IconButton(
                         icon: const Icon(Icons.add),
                         onPressed: () {
@@ -286,6 +295,7 @@ class GuildScrollBar extends StatelessWidget {
   }
 }
 
+// Rounded guild icon who's border radius changes when its selected
 class GuildIcon extends StatelessWidget {
   const GuildIcon({required this.iconURL, required this.selected, Key? key})
       : super(key: key);
@@ -304,6 +314,7 @@ class GuildIcon extends StatelessWidget {
   }
 }
 
+// Dialog prompting to join or create a server. The buttons will spawn subsequent dialogs
 class CreateOrJoinGuildDialog extends StatelessWidget {
   const CreateOrJoinGuildDialog({super.key});
 
@@ -317,7 +328,9 @@ class CreateOrJoinGuildDialog extends StatelessWidget {
         contentPadding: const EdgeInsets.all(20),
         title: Container(
             padding: const EdgeInsets.only(bottom: 8),
-            width: MediaQuery.of(context).size.width,
+            width: MediaQuery.of(context)
+                .size
+                .width, // We want our title divisor to take up the whole dialog width
             decoration: BoxDecoration(
                 border: Border(
                     bottom: BorderSide(color: theme.colorScheme.outline))),
@@ -325,6 +338,7 @@ class CreateOrJoinGuildDialog extends StatelessWidget {
         children: [
           RichText(
               text: TextSpan(
+                  // Bold for "create a server"
                   text: "Do you want to ",
                   style: regStyle,
                   children: [
@@ -350,7 +364,8 @@ class CreateOrJoinGuildDialog extends StatelessWidget {
             children: [
               ElevatedButton(
                   onPressed: () {
-                    Navigator.of(context).pop(context);
+                    Navigator.of(context).pop(
+                        context); // When the buttons are pressed, kill the current dialog and spawn a new one
                     showDialog(
                         context: context,
                         builder: (BuildContext context) =>
@@ -419,6 +434,7 @@ class _JoinServerDialogState extends State<JoinServerDialog> {
         }),
         onSubmitted: (value) => _submit(appstate, text: value).then((_) {
           if (_success == true) Navigator.of(context).pop(context);
+          // If we joined guild successfully, kill the dialog
         }),
       ),
       const SizedBox(height: 22),
@@ -451,6 +467,7 @@ class _JoinServerDialogState extends State<JoinServerDialog> {
       ),
       if (_success == false)
         Center(
+            // Join request failed, show an error to user and keep dialog open
             child: Text("Joining server failed. Check the ID and try again.",
                 style: theme.textTheme.labelMedium!
                     .copyWith(color: theme.colorScheme.error)))
@@ -492,6 +509,7 @@ class _CreateServerDialogState extends State<CreateServerDialog> {
                   Border(bottom: BorderSide(color: theme.colorScheme.outline))),
           child: const Center(child: Text("Create Your Server"))),
       children: [
+        // Change here when file uploads are implemented
         Text("SERVER ICON", style: theme.textTheme.labelSmall),
         const SizedBox(height: 8),
         Row(
@@ -531,7 +549,7 @@ class _CreateServerDialogState extends State<CreateServerDialog> {
           }),
           onSubmitted: (value) => _submit(appstate, text: value).then((_) {
             if (_success == true) {
-              Navigator.of(context).pop(context);
+              Navigator.of(context).pop(context); // Kill dialog if it worked
             }
           }),
         ),
@@ -569,6 +587,7 @@ class _CreateServerDialogState extends State<CreateServerDialog> {
         ),
         if (_success == false)
           Center(
+              // Server creation failed. idk why this would happen, maybe the server name was too long or something
               child: Text("Server creation failed. Uh oh",
                   style: theme.textTheme.labelMedium!
                       .copyWith(color: theme.colorScheme.error)))
