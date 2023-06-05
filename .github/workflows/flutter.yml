@@ -24,3 +24,7 @@ jobs:
         flutter-version: '3.10.1'
     - run: flutter pub get
     - run: flutter build apk --dart-define=API_HOST=${{ secrets.API_HOST }}
+    - uses: actions/upload-artifact@v3
+      with:
+        name: app
+        path: build/app/outputs/flutter-apk/app-release.apk
