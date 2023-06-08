@@ -288,7 +288,9 @@ class _MessageListState extends State<MessageList> {
                   return InkWell(
                     // InkWell provides the cool ripple effect ontap
                     // We dont actually need any tap behavior tho... so set to (){}
-                    onTap: () {},
+                    onTap: appstate.currentMenuSide == RevealSide.main
+                        ? () {}
+                        : null,
                     child: Padding(
                       padding:
                           const EdgeInsets.only(left: 24, top: 8, right: 16),

@@ -140,6 +140,14 @@ class User {
   @override
   int get hashCode => Object.hash(id, "");
 
+  factory User.fromVoiceJson(Map<String, dynamic> json) {
+    return User(
+        avatar: json["avatar"],
+        id: json["id"],
+        name: json["username"],
+        email: null);
+  }
+
   factory User.fromJson(Map<String, dynamic> json) {
     if (json.containsKey("email")) {
       return User(

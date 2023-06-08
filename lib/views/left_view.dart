@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:zling/lib/voice.dart';
 import 'package:zling/ui-elements/overlapping_panels.dart';
+import 'package:zling/ui-elements/voice_channel_members.dart';
 import '../global_state.dart';
 import 'package:zling/lib/api.dart';
 import '../ui-elements/context_menu.dart';
+import 'dart:async';
+import "package:zling/ui-elements/voice_controls.dart";
 
 class LeftView extends StatelessWidget {
   const LeftView({super.key});
@@ -172,21 +176,38 @@ class ChannelsView extends StatelessWidget {
                             ? const []
                             : appstate.channels!
                                 .where((i) => i.type == "voice")
-                                .map((channel) => ListTile(
-                                      leading: const Icon(Icons.headphones),
-                                      selected:
-                                          // REPLACE HERE WITH VOICE INDEX
-                                          appstate.currentChannel != null &&
-                                              appstate.currentChannel ==
-                                                  channel,
-                                      horizontalTitleGap: 0,
-                                      visualDensity: const VisualDensity(
-                                          horizontal: 0, vertical: -4),
-                                      title: Text(channel.name),
-                                      onTap: () {
-                                        // Voice Stuff Here
-                                      },
-                                    ))),
+                                .map((channel) {
+                                var tile = ListTile(
+                                  leading: const Icon(Icons.headphones),
+                                  selected:
+                                      // REPLACE HERE WITH VOICE INDEX
+                                      appstate.currentChannel != null &&
+                                          appstate.currentChannel == channel,
+                                  horizontalTitleGap: 0,
+                                  visualDensity: const VisualDensity(
+                                      horizontal: 0, vertical: -4),
+                                  title: Text(channel.name),
+                                  onTap: () {
+                                    if (appstate.voiceChannelCurrent?.id ==
+                                        channel.id) return;
+                                    appstate.voiceChannelTarget.value =
+                                        VoiceChannelTarget(VoiceChannelInfo(
+                                            guildName:
+                                                appstate.currentGuild!.name,
+                                            id: channel.id,
+                                            name: channel.name));
+                                  },
+                                );
+                                if (appstate.voiceChannelCurrent?.id ==
+                                    channel.id) {
+                                  return Column(children: [
+                                    tile,
+                                    ...voiceChannelMembers(appstate)
+                                  ]);
+                                } else {
+                                  return tile;
+                                }
+                              })),
                     ],
                   ),
                 ),
@@ -214,7 +235,8 @@ class ChannelsView extends StatelessWidget {
                       child: const Text("Create voice channel")),
                 ),
                 const SizedBox(height: 8)
-              ]
+              ],
+              if (appstate.voiceChannelCurrent != null) const VoiceControls()
             ],
           ),
         ),

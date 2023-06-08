@@ -23,6 +23,26 @@ const String reissueEndpoint = "$baseURL/auth/reissue";
 const String whoamiEndpoint = "$baseURL/auth/whoami";
 const String logInEndpoint = "$baseURL/auth/login";
 
+const String voicePeersEndpoint = "$baseURL/voice/peers";
+
+const String voiceConsumeEndpoint = "$baseURL/voice/consume";
+
+const String voiceLeaveEndpoint = "$baseURL/voice/leave";
+
+const String voiceSendTransportCreateEndpoint =
+    "$baseURL/voice/transport/create?type=send";
+const String voiceSendTransportConnectEndpoint =
+    "$baseURL/voice/transport/connect?type=send";
+
+const String voiceProduceEndpoint = "$baseURL/voice/produce";
+
+const String voiceRecvTransportCreateEndpoint =
+    "$baseURL/voice/transport/create?type=recv";
+const String voiceRecvTransportConnectEndpoint =
+    "$baseURL/voice/transport/connect?type=recv";
+
+Function joinVoiceEndpoint = (String cid) => "$baseURL/voice/join?c=$cid";
+
 Function joinGuildEndpoint = (String gid) => "$baseURL/guilds/$gid/join";
 
 Function typingEndpoint =
@@ -30,6 +50,9 @@ Function typingEndpoint =
 
 Function wsEndpoint =
     (accessToken) => "ws://$hostURL/api/events/ws/?auth=$accessToken";
+
+Function voiceSocketEndpoint = (String identity, String token) =>
+    "wss://$hostURL/api/voice/ws/?i=$identity&t=$token";
 
 Function channelsEndpoint = (String id) => "$baseURL/guilds/$id/channels";
 

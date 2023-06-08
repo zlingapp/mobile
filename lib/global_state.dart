@@ -322,13 +322,14 @@ class GlobalState extends ChangeNotifier with WidgetsBindingObserver {
         if (!socketBrokenNotified &&
             !socketConnectingFromBroken &&
             !socketReconnecting) {
-          _logger.info("Socket heartbeat failed, notifying listeners");
+          // _logger.info("Socket heartbeat failed, notifying listeners");
           socketBrokenNotified = true;
           notifyListeners();
         }
       }
     });
     WidgetsBinding.instance.addObserver(this);
+    voiceChannelTarget.addListener(() => onTargetChange(this));
   }
 
   @override
@@ -343,6 +344,8 @@ class GlobalState extends ChangeNotifier with WidgetsBindingObserver {
 
   VoiceState voiceState = VoiceState.disconected;
   Map<String, Peer> voicePeers = {};
+  var voiceChannelTarget =
+      ValueNotifier<VoiceChannelTarget>(VoiceChannelTarget.none());
   VoiceChannelInfo? voiceChannelCurrent;
   void set(Function callback) {
     callback();
@@ -354,6 +357,7 @@ class GlobalState extends ChangeNotifier with WidgetsBindingObserver {
     timer?.cancel();
     _sub?.cancel();
     ws?.sink.close();
+    disconnect(this);
     for (Timer t in typing.values) {
       t.cancel();
     }
